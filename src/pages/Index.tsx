@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap, School, UserCog } from "lucide-react";
+import { GraduationCap, School, UserCog, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -33,7 +33,7 @@ const Index = () => {
     );
   }
 
-  const handleDemoLogin = (role: "student" | "teacher" | "admin") => {
+  const handleDemoLogin = (role: "student" | "teacher" | "admin" | "super_admin") => {
     loginWithRole(role);
     navigate("/dashboard");
   };
@@ -123,6 +123,15 @@ const Index = () => {
                       >
                         <UserCog className="h-6 w-6 text-invertidos-blue" />
                         <span>Administrador</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="h-20 flex flex-col items-center justify-center gap-1 hover:bg-blue-50"
+                        onClick={() => handleDemoLogin("super_admin")}
+                      >
+                        <Shield className="h-6 w-6 text-invertidos-blue" />
+                        <span>Super Administrador</span>
                       </Button>
                     </div>
                   </div>

@@ -49,6 +49,12 @@ const mockUsers = {
     role: "admin" as UserRole,
     avatarUrl: "/avatar-admin.png",
     schoolId: "school1"
+  },
+  super_admin: {
+    id: "sa1",
+    name: "Super Administrador",
+    role: "super_admin" as UserRole,
+    avatarUrl: "/avatar-admin.png"
   }
 };
 
