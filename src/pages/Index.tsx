@@ -8,12 +8,15 @@ import { Label } from "@/components/ui/label";
 import { GraduationCap, School, UserCog, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { loginWithRole, isAuthenticated, isLoading } = useAuth();
+  const { loginWithRole, login, isAuthenticated, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   // Redirect if already authenticated
   React.useEffect(() => {
@@ -36,6 +39,31 @@ const Index = () => {
   const handleDemoLogin = (role: "student" | "teacher" | "admin" | "super_admin") => {
     loginWithRole(role);
     navigate("/dashboard");
+  };
+
+  const handleRealLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      toast({
+        title: "Error",
+        description: "Por favor, introduce tu correo electrónico y contraseña",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      await login(email, password);
+      // Si el login es exitoso, el useEffect detectará el cambio en isAuthenticated y redirigirá
+    } catch (error) {
+      // El error ya se maneja en el contexto de autenticación
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -65,7 +93,7 @@ const Index = () => {
                 </TabsList>
                 
                 <TabsContent value="login">
-                  <div className="space-y-4">
+                  <form onSubmit={handleRealLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo electrónico</Label>
                       <Input 
@@ -74,6 +102,7 @@ const Index = () => {
                         placeholder="tu@correo.com" 
                         value={email}
                         onChange={e => setEmail(e.target.value)}
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div className="space-y-2">
@@ -83,12 +112,24 @@ const Index = () => {
                         type="password" 
                         value={password}
                         onChange={e => setPassword(e.target.value)}
+                        disabled={isSubmitting}
                       />
                     </div>
-                    <Button className="w-full bg-invertidos-blue hover:bg-blue-700">
-                      Iniciar Sesión
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-invertidos-blue hover:bg-blue-700"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                          Iniciando...
+                        </>
+                      ) : (
+                        "Iniciar Sesión"
+                      )}
                     </Button>
-                  </div>
+                  </form>
                 </TabsContent>
                 
                 <TabsContent value="demo">
