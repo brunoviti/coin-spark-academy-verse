@@ -169,10 +169,11 @@ export const createMarketplacePurchase = async (studentId: string, itemId: strin
 
 // Update marketplace item stock after purchase
 export const updateItemStock = async (itemId: string, quantity: number) => {
+  // Fixed: using a direct query to update the stock instead of RPC
   const { data, error } = await supabase
     .from('marketplace_items')
     .update({
-      stock: supabase.rpc('get_user_role', { user_id: itemId })
+      stock: quantity // Directly use the quantity parameter
     })
     .eq('id', itemId);
     

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Award, 
-  CoinIcon,
+  Coins,
   PlusCircle, 
   Search, 
   Trash2,
@@ -71,7 +70,6 @@ const AchievementTypeManagement: React.FC<{
       coin_value: newType.coinValue
     });
     
-    // Reset form
     setNewType({
       name: "",
       description: "",
@@ -235,7 +233,7 @@ const AchievementTypeManagement: React.FC<{
                   <div>
                     <h3 className="font-medium">{type.name}</h3>
                     <div className="flex items-center text-sm text-muted-foreground">
-                      <CoinIcon className="h-3 w-3 mr-1" />
+                      <Coins className="h-3 w-3 mr-1" />
                       {type.coin_value} monedas
                     </div>
                   </div>
@@ -253,7 +251,6 @@ const AchievementTypeManagement: React.FC<{
           </div>
         )}
         
-        {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -319,7 +316,6 @@ const AchievementTypeManagement: React.FC<{
           </DialogContent>
         </Dialog>
         
-        {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
