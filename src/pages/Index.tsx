@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { Graduation, BookOpen, Settings } from "lucide-react";
+import { GraduationCap, BookOpen, Settings } from "lucide-react";
 
 const Index = () => {
   const { login, isAuthenticated } = useAuth();
@@ -44,7 +43,7 @@ const Index = () => {
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-invertidos-blue/10 flex items-center justify-center text-invertidos-blue">
-                  <Graduation className="w-5 h-5" />
+                  <GraduationCap className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-medium">Logros Reconocidos</h3>
