@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Database } from "@/integrations/supabase/types";
 
 export type UserRole = "student" | "teacher" | "admin" | "super_admin";
 
@@ -67,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session) {
           // Get user profile from our profiles table
+          // Use type casting to avoid TypeScript errors with table names
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -76,13 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (error) throw error;
           
           if (profile) {
+            // Use type assertion to access profile properties
             setUser({
-              id: profile.id,
-              name: profile.name,
-              role: profile.role,
-              avatarUrl: profile.avatar_url,
-              coins: profile.coins,
-              schoolId: profile.school_id
+              id: profile.id as string,
+              name: profile.name as string,
+              role: profile.role as UserRole,
+              avatarUrl: profile.avatar_url as string | undefined,
+              coins: profile.coins as number | undefined,
+              schoolId: profile.school_id as string | undefined
             });
           }
         } else {
@@ -111,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
           // Get user profile from our profiles table
+          // Use type casting to avoid TypeScript errors with table names
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -123,13 +127,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           
           if (profile) {
+            // Use type assertion to access profile properties
             setUser({
-              id: profile.id,
-              name: profile.name,
-              role: profile.role,
-              avatarUrl: profile.avatar_url,
-              coins: profile.coins,
-              schoolId: profile.school_id
+              id: profile.id as string,
+              name: profile.name as string,
+              role: profile.role as UserRole,
+              avatarUrl: profile.avatar_url as string | undefined,
+              coins: profile.coins as number | undefined,
+              schoolId: profile.school_id as string | undefined
             });
           }
         } else if (event === 'SIGNED_OUT') {
