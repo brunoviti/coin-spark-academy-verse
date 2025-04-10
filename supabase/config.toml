@@ -1,1 +1,4 @@
+
 project_id = "whjqvtvkuyucxsmwkthb"
+# Add a comment to indicate that tables need to be created
+# The 'profiles' table should exist in the database with proper columns

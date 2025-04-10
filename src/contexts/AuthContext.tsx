@@ -186,22 +186,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      // 1. Sign up the user with Supabase Auth
+      // 1. Create the user in Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            name,
-            role,
-          },
-        },
       });
       
       if (signUpError) throw signUpError;
       
       if (authData.user) {
-        // 2. Create a new profile in the profiles table
+        console.log("User created in auth:", authData.user.id);
+        
+        // 2. Update the user's metadata
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: {
+            name,
+            role,
+          }
+        });
+        
+        if (updateError) {
+          console.error("Error updating user metadata:", updateError);
+          // If updating metadata fails, continue anyway as it's not critical
+        }
+        
+        // 3. Create a new profile in the profiles table
         const { error: profileError } = await supabase.from('profiles').insert({
           id: authData.user.id,
           name: name,
@@ -212,10 +221,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         if (profileError) {
+          console.error("Error creating profile:", profileError);
           // If profile creation fails, we should clean up the auth user
-          console.error("Error creating profile, cleaning up auth user:", profileError);
-          await supabase.auth.admin.deleteUser(authData.user.id);
-          throw profileError;
+          await supabase.auth.signOut(); // Sign out the user
+          throw new Error("Error creating user profile: " + profileError.message);
         }
         
         toast({
