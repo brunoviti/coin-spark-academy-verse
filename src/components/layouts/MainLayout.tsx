@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   Home, Wallet, Award, ShoppingBag, BarChart3, 
-  LogOut, Settings, Menu, X, User
+  LogOut, Settings, Menu, User, School
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -26,13 +26,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       name: "Dashboard", 
       icon: <Home className="w-5 h-5" />, 
       path: "/dashboard", 
-      roles: ["student", "teacher", "admin"] 
+      roles: ["student", "teacher", "admin", "super_admin"] 
     },
     { 
       name: "Mi Billetera", 
       icon: <Wallet className="w-5 h-5" />, 
       path: "/wallet", 
-      roles: ["student"] 
+      roles: ["student", "teacher"] 
     },
     { 
       name: "Mis Logros", 
@@ -44,7 +44,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       name: "Mercado Escolar", 
       icon: <ShoppingBag className="w-5 h-5" />, 
       path: "/marketplace", 
-      roles: ["student", "teacher", "admin"] 
+      roles: ["student", "teacher", "admin", "super_admin"] 
     },
     { 
       name: "Zona de Intercambio", 
@@ -53,10 +53,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       roles: ["student"] 
     },
     { 
+      name: "Gestión de Clases", 
+      icon: <School className="w-5 h-5" />, 
+      path: "/classes", 
+      roles: ["teacher", "admin"] 
+    },
+    { 
       name: "Administración", 
       icon: <Settings className="w-5 h-5" />, 
       path: "/admin", 
-      roles: ["admin"] 
+      roles: ["admin", "super_admin"] 
     }
   ];
   
@@ -64,13 +70,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
     item => user && item.roles.includes(user.role)
   );
   
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/");
-    toast({
-      title: "Sesión cerrada",
-      description: "Has cerrado sesión correctamente",
-    });
   };
   
   if (!user) {
@@ -98,6 +100,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
                 <div>
                   <p className="font-medium">{user.name}</p>
                   <p className="text-sm text-muted-foreground capitalize">{user.role}</p>
+                  {user.coins !== undefined && user.role === "student" && (
+                    <p className="text-sm font-semibold text-green-600">{user.coins} monedas</p>
+                  )}
                 </div>
               </div>
               
@@ -164,6 +169,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
               <div>
                 <p className="font-medium">{user.name}</p>
                 <p className="text-sm text-muted-foreground capitalize">{user.role}</p>
+                {user.coins !== undefined && user.role === "student" && (
+                  <p className="text-sm font-semibold text-green-600">{user.coins} monedas</p>
+                )}
               </div>
             </div>
             <Button

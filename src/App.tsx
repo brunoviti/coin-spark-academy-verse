@@ -13,6 +13,7 @@ import AchievementsPage from "./pages/AchievementsPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import ExchangePage from "./pages/ExchangePage";
 import AdminPage from "./pages/AdminPage";
+import ClassesPage from "./pages/ClassesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/achievements" element={<AchievementsPage />} />
             <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/exchange" element={<ExchangePage />} />
+            <Route path="/classes" element={<ClassesPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
