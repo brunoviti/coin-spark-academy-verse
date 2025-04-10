@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -19,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, role?: UserRole) => Promise<void>;
   loginWithRole: (role: UserRole) => void; // For demo purposes
   logout: () => Promise<void>;
   isLoading: boolean;
@@ -181,7 +181,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Simplified login with role for demo purposes
+  const signup = async (email: string, password: string, name: string, role: UserRole = "student") => {
+    try {
+      setIsLoading(true);
+      
+      // Registro en Supabase Auth
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Registro exitoso",
+        description: "Se ha enviado un correo de confirmación a tu dirección de email",
+      });
+    } catch (error) {
+      console.error("Error signing up:", error);
+      toast({
+        title: "Error al registrarse",
+        description: (error as Error).message || "Hubo un problema al registrarse",
+        variant: "destructive"
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const loginWithRole = (role: UserRole) => {
     setUser(mockUsers[role]);
     localStorage.setItem("userRole", role);
@@ -223,6 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       isAuthenticated: !!user, 
       login,
+      signup,
       loginWithRole,
       logout,
       isLoading

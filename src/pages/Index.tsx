@@ -12,9 +12,11 @@ import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { loginWithRole, login, isAuthenticated, isLoading } = useAuth();
+  const { loginWithRole, login, signup, isAuthenticated, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -66,6 +68,34 @@ const Index = () => {
     }
   };
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password || !name) {
+      toast({
+        title: "Error",
+        description: "Por favor, completa todos los campos",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      await signup(email, password, name);
+      toast({
+        title: "Registro exitoso",
+        description: "Te has registrado correctamente. Por favor verifica tu correo electrónico.",
+      });
+      setIsRegistering(false); // Volver al formulario de login
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-invertidos-blue to-blue-800 flex flex-col">
       <header className="py-6 px-4 sm:px-6">
@@ -93,43 +123,114 @@ const Index = () => {
                 </TabsList>
                 
                 <TabsContent value="login">
-                  <form onSubmit={handleRealLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Correo electrónico</Label>
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        placeholder="tu@correo.com" 
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
+                  {isRegistering ? (
+                    <form onSubmit={handleSignup} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Nombre completo</Label>
+                        <Input 
+                          id="name" 
+                          type="text" 
+                          placeholder="Tu nombre" 
+                          value={name}
+                          onChange={e => setName(e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Correo electrónico</Label>
+                        <Input 
+                          id="email" 
+                          type="email" 
+                          placeholder="tu@correo.com" 
+                          value={email}
+                          onChange={e => setEmail(e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Contraseña</Label>
+                        <Input 
+                          id="password" 
+                          type="password" 
+                          value={password}
+                          onChange={e => setPassword(e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-invertidos-blue hover:bg-blue-700"
                         disabled={isSubmitting}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Contraseña</Label>
-                      <Input 
-                        id="password" 
-                        type="password" 
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                            Registrando...
+                          </>
+                        ) : (
+                          "Crear cuenta"
+                        )}
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        className="w-full"
+                        onClick={() => setIsRegistering(false)}
                         disabled={isSubmitting}
-                      />
-                    </div>
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-invertidos-blue hover:bg-blue-700"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                          Iniciando...
-                        </>
-                      ) : (
-                        "Iniciar Sesión"
-                      )}
-                    </Button>
-                  </form>
+                      >
+                        Volver a iniciar sesión
+                      </Button>
+                    </form>
+                  ) : (
+                    <>
+                      <form onSubmit={handleRealLogin} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Correo electrónico</Label>
+                          <Input 
+                            id="email" 
+                            type="email" 
+                            placeholder="tu@correo.com" 
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="password">Contraseña</Label>
+                          <Input 
+                            id="password" 
+                            type="password" 
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-invertidos-blue hover:bg-blue-700"
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                              Iniciando...
+                            </>
+                          ) : (
+                            "Iniciar Sesión"
+                          )}
+                        </Button>
+                      </form>
+                      <div className="text-center mt-4">
+                        <Button 
+                          type="button" 
+                          variant="link" 
+                          onClick={() => setIsRegistering(true)}
+                        >
+                          ¿No tienes cuenta? Regístrate aquí
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="demo">

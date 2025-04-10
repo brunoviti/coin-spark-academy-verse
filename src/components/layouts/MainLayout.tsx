@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
+import NavBar from "../layout/NavBar";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -81,8 +81,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
   
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Desktop and Mobile NavBar */}
+      <NavBar />
+      
       {/* Mobile Nav */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-white shadow-sm z-50 px-4 py-2 flex justify-between items-center">
+      <div className="md:hidden fixed top-10 left-0 right-0 bg-white shadow-sm z-50 px-4 py-2 flex justify-between items-center">
         <h1 className="text-xl font-bold text-invertidos-blue">Invertidos</h1>
         <Sheet>
           <SheetTrigger asChild>
@@ -138,7 +141,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       
       {/* Desktop Nav */}
       <div className="hidden md:flex min-h-screen">
-        <aside className="w-64 bg-sidebar border-r border-sidebar-border shadow-sm fixed top-0 left-0 h-full flex flex-col">
+        <aside className="w-64 bg-sidebar border-r border-sidebar-border shadow-sm fixed top-10 left-0 h-full flex flex-col">
           <div className="p-6">
             <h1 className="text-2xl font-bold text-invertidos-blue">Invertidos</h1>
           </div>
@@ -185,7 +188,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
           </div>
         </aside>
         
-        <main className="flex-1 ml-64">
+        <main className="flex-1 ml-64 mt-10">
           <div className="p-6">
             <h1 className="text-2xl font-bold mb-6">{title}</h1>
             {children}
@@ -194,7 +197,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title }) => {
       </div>
       
       {/* Mobile Content */}
-      <div className="md:hidden pt-14">
+      <div className="md:hidden pt-24">
         <div className="p-4">
           <h1 className="text-xl font-bold mb-4">{title}</h1>
           {children}
