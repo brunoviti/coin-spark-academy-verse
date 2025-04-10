@@ -66,6 +66,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for existing session on component mount
   useEffect(() => {
+    // Set up auth state change listener FIRST to prevent issues
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // Don't make Supabase calls directly in the callback to prevent deadlocks
+          // Use setTimeout to defer the profile fetch
+          setTimeout(async () => {
+            try {
+              // Get user profile from our profiles table
+              const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+                
+              if (error) {
+                console.error("Error getting user profile:", error);
+                return;
+              }
+              
+              if (profile) {
+                setUser({
+                  id: profile.id as string,
+                  name: profile.name as string,
+                  role: profile.role as UserRole,
+                  avatarUrl: profile.avatar_url as string | undefined,
+                  coins: profile.coins as number | undefined,
+                  schoolId: profile.school_id as string | undefined
+                });
+              }
+            } catch (error) {
+              console.error("Error in auth state change:", error);
+            }
+          }, 0);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+    
+    // THEN check for existing session
     const checkSession = async () => {
       try {
         setIsLoading(true);
@@ -75,7 +116,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session) {
           // Get user profile from our profiles table
-          // Use type casting to avoid TypeScript errors with table names
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -85,7 +125,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (error) throw error;
           
           if (profile) {
-            // Use type assertion to access profile properties
             setUser({
               id: profile.id as string,
               name: profile.name as string,
@@ -115,40 +154,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     checkSession();
-    
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          // Get user profile from our profiles table
-          // Use type casting to avoid TypeScript errors with table names
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (error) {
-            console.error("Error getting user profile:", error);
-            return;
-          }
-          
-          if (profile) {
-            // Use type assertion to access profile properties
-            setUser({
-              id: profile.id as string,
-              name: profile.name as string,
-              role: profile.role as UserRole,
-              avatarUrl: profile.avatar_url as string | undefined,
-              coins: profile.coins as number | undefined,
-              schoolId: profile.school_id as string | undefined
-            });
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
     
     return () => {
       subscription.unsubscribe();
@@ -190,6 +195,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            name,
+            role,
+          }
+        }
       });
       
       if (signUpError) throw signUpError;
@@ -197,25 +208,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (authData.user) {
         console.log("User created in auth:", authData.user.id);
         
-        // 2. Update the user's metadata
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: {
-            name,
-            role,
-          }
-        });
-        
-        if (updateError) {
-          console.error("Error updating user metadata:", updateError);
-          // If updating metadata fails, continue anyway as it's not critical
-        }
-        
-        // 3. Create a new profile in the profiles table
+        // 2. Create a new profile in the profiles table
         const { error: profileError } = await supabase.from('profiles').insert({
           id: authData.user.id,
           name: name,
           role: role,
-          email: email,
           coins: role === "student" ? 0 : null, // Only students get coins
           school_id: null, // Will be assigned later
         });
