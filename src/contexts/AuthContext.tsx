@@ -19,6 +19,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, role?: UserRole) => Promise<void>;
   loginWithRole: (role: UserRole) => void; // For demo purposes
   logout: () => Promise<void>;
   isLoading: boolean;
@@ -181,6 +182,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signup = async (email: string, password: string, name: string, role: UserRole = "student") => {
+    try {
+      setIsLoading(true);
+      
+      // 1. Sign up the user with Supabase Auth
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+          },
+        },
+      });
+      
+      if (signUpError) throw signUpError;
+      
+      if (authData.user) {
+        // 2. Create a new profile in the profiles table
+        const { error: profileError } = await supabase.from('profiles').insert({
+          id: authData.user.id,
+          name: name,
+          role: role,
+          email: email,
+          coins: role === "student" ? 0 : null, // Only students get coins
+          school_id: null, // Will be assigned later
+        });
+        
+        if (profileError) {
+          // If profile creation fails, we should clean up the auth user
+          console.error("Error creating profile, cleaning up auth user:", profileError);
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          throw profileError;
+        }
+        
+        toast({
+          title: "Registro exitoso",
+          description: "Tu cuenta ha sido creada correctamente",
+        });
+      }
+    } catch (error) {
+      console.error("Error signing up:", error);
+      toast({
+        title: "Error al crear cuenta",
+        description: (error as Error).message || "Hubo un problema al crear la cuenta",
+        variant: "destructive"
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Simplified login with role for demo purposes
   const loginWithRole = (role: UserRole) => {
     setUser(mockUsers[role]);
@@ -223,6 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       isAuthenticated: !!user, 
       login,
+      signup,
       loginWithRole,
       logout,
       isLoading

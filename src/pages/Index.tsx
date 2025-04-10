@@ -8,12 +8,22 @@ import { Label } from "@/components/ui/label";
 import { GraduationCap, School, UserCog, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { loginWithRole, isAuthenticated, isLoading } = useAuth();
+  const { loginWithRole, login, signup, isAuthenticated, isLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState("login");
+
+  // Login form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  
+  // Signup form state
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
 
   // Redirect if already authenticated
   React.useEffect(() => {
@@ -38,6 +48,60 @@ const Index = () => {
     navigate("/dashboard");
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await login(email, password);
+      // Navigation happens automatically via the useEffect
+    } catch (error) {
+      // Error is handled in the login function
+      console.error("Login failed:", error);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!signupEmail || !signupPassword || !name) {
+      toast({
+        title: "Error",
+        description: "Por favor completa todos los campos obligatorios",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (signupPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Las contraseñas no coinciden",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (signupPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "La contraseña debe tener al menos 6 caracteres",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await signup(signupEmail, signupPassword, name);
+      setActiveTab("login");
+      toast({
+        title: "Registro exitoso",
+        description: "Por favor inicia sesión con tus nuevas credenciales",
+      });
+    } catch (error) {
+      // Error is handled in signup function
+      console.error("Signup failed:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-invertidos-blue to-blue-800 flex flex-col">
       <header className="py-6 px-4 sm:px-6">
@@ -58,14 +122,15 @@ const Index = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
                   <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
+                  <TabsTrigger value="signup">Crear Cuenta</TabsTrigger>
                   <TabsTrigger value="demo">Modo Demo</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="login">
-                  <div className="space-y-4">
+                  <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo electrónico</Label>
                       <Input 
@@ -74,6 +139,7 @@ const Index = () => {
                         placeholder="tu@correo.com" 
                         value={email}
                         onChange={e => setEmail(e.target.value)}
+                        required
                       />
                     </div>
                     <div className="space-y-2">
@@ -83,12 +149,65 @@ const Index = () => {
                         type="password" 
                         value={password}
                         onChange={e => setPassword(e.target.value)}
+                        required
                       />
                     </div>
-                    <Button className="w-full bg-invertidos-blue hover:bg-blue-700">
+                    <Button type="submit" className="w-full bg-invertidos-blue hover:bg-blue-700">
                       Iniciar Sesión
                     </Button>
-                  </div>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Nombre completo</Label>
+                      <Input 
+                        id="signup-name" 
+                        type="text" 
+                        placeholder="Tu nombre" 
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Correo electrónico</Label>
+                      <Input 
+                        id="signup-email" 
+                        type="email" 
+                        placeholder="tu@correo.com" 
+                        value={signupEmail}
+                        onChange={e => setSignupEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Contraseña</Label>
+                      <Input 
+                        id="signup-password" 
+                        type="password" 
+                        placeholder="Mínimo 6 caracteres"
+                        value={signupPassword}
+                        onChange={e => setSignupPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirmar contraseña</Label>
+                      <Input 
+                        id="confirm-password" 
+                        type="password" 
+                        placeholder="Confirma tu contraseña"
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full bg-invertidos-blue hover:bg-blue-700">
+                      Crear Cuenta
+                    </Button>
+                  </form>
                 </TabsContent>
                 
                 <TabsContent value="demo">
