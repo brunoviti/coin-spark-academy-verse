@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      // 1. Create the user in Supabase Auth
+      // 1. Create the user in Supabase Auth with metadata that will be used by the trigger
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -152,25 +152,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (signUpError) throw signUpError;
       
+      // We rely on the database trigger to create the profile
+      // The trigger handle_new_user_auth() will create the profile entry automatically
+      
       if (authData.user) {
-        console.log("User created in auth:", authData.user.id);
-        
-        // 2. Create a new profile in the profiles table
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: authData.user.id,
-          name: name,
-          role: role,
-          coins: role === "student" ? 0 : null, // Only students get coins
-          school_id: null, // Will be assigned later
-        });
-        
-        if (profileError) {
-          console.error("Error creating profile:", profileError);
-          // If profile creation fails, we should clean up the auth user
-          await supabase.auth.signOut(); // Sign out the user
-          throw new Error("Error creating user profile: " + profileError.message);
-        }
-        
         toast({
           title: "Registro exitoso",
           description: "Tu cuenta ha sido creada correctamente",
