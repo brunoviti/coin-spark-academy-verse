@@ -369,7 +369,7 @@ export type Database = {
           created_at?: string
           id: string
           name: string
-          role: Database["public"]["Enums"]["user_role"]
+          role?: Database["public"]["Enums"]["user_role"]
           school_id?: string | null
           updated_at?: string
         }

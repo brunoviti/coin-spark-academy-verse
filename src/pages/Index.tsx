@@ -9,6 +9,10 @@ import { GraduationCap, School, UserCog, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserRole } from "@/contexts/auth/types";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -24,6 +28,7 @@ const Index = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [selectedRole, setSelectedRole] = useState<UserRole>("student");
 
   // Redirect if already authenticated
   React.useEffect(() => {
@@ -90,7 +95,7 @@ const Index = () => {
     }
 
     try {
-      await signup(signupEmail, signupPassword, name);
+      await signup(signupEmail, signupPassword, name, selectedRole);
       setActiveTab("login");
       toast({
         title: "Registro exitoso",
@@ -204,6 +209,32 @@ const Index = () => {
                         required
                       />
                     </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Selecciona tu rol</Label>
+                      <RadioGroup 
+                        className="flex gap-4 pt-2" 
+                        defaultValue="student"
+                        value={selectedRole}
+                        onValueChange={(value) => setSelectedRole(value as UserRole)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="student" id="student" />
+                          <Label htmlFor="student" className="flex items-center gap-1">
+                            <GraduationCap className="h-4 w-4" />
+                            <span>Estudiante</span>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="teacher" id="teacher" />
+                          <Label htmlFor="teacher" className="flex items-center gap-1">
+                            <School className="h-4 w-4" />
+                            <span>Profesor</span>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
                     <Button type="submit" className="w-full bg-invertidos-blue hover:bg-blue-700">
                       Crear Cuenta
                     </Button>
