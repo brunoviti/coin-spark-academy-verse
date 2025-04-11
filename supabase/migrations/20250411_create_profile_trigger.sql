@@ -8,26 +8,45 @@ RETURNS TRIGGER
 LANGUAGE PLPGSQL
 SECURITY DEFINER
 AS $$
+DECLARE
+  valid_role user_role;
+  user_name text;
 BEGIN
-  -- Ensure the user_role type exists and is valid
-  -- Use a more defensive approach when casting the role
-  INSERT INTO public.profiles (id, name, role, avatar_url, coins)
+  -- Obtener el nombre del usuario o usar un valor predeterminado
+  user_name := COALESCE(new.raw_user_meta_data->>'name', 'New User');
+  
+  -- Determinar el rol del usuario de manera segura
+  BEGIN
+    -- Intentar convertir directamente si el rol es válido
+    IF new.raw_user_meta_data->>'role' IN ('student', 'teacher', 'admin', 'super_admin') THEN
+      valid_role := (new.raw_user_meta_data->>'role')::user_role;
+    ELSE
+      -- Usar un valor predeterminado si el rol no es válido
+      valid_role := 'student'::user_role;
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    -- Si hay algún problema con la conversión, usar el valor predeterminado
+    valid_role := 'student'::user_role;
+  END;
+
+  -- Insertar en la tabla de perfiles con valores seguros
+  INSERT INTO public.profiles (id, name, role, avatar_url, coins, updated_at)
   VALUES (
     new.id, 
-    coalesce(new.raw_user_meta_data->>'name', 'New User'), 
-    CASE 
-      WHEN (new.raw_user_meta_data->>'role') IN ('student', 'teacher', 'admin', 'super_admin') 
-      THEN (new.raw_user_meta_data->>'role')::user_role 
-      ELSE 'student'::user_role 
-    END,
+    user_name, 
+    valid_role,
     null, 
-    0
+    0,
+    now()
   );
+  
+  RAISE NOTICE 'Usuario creado exitosamente: ID=%, Nombre=%, Rol=%', new.id, user_name, valid_role;
   RETURN NEW;
 EXCEPTION
   WHEN OTHERS THEN
-    -- Log the error but don't fail the entire transaction
-    RAISE WARNING 'Error creating profile: %', SQLERRM;
+    -- Registrar el error de manera detallada pero continuar con la transacción
+    RAISE WARNING 'Error creando perfil para usuario %: %. Detalles: %', 
+                  new.id, SQLERRM, new.raw_user_meta_data;
     RETURN NEW;
 END;
 $$;

@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      console.log("Starting signup process...");
+      console.log("Starting signup process with:", { email, name, role });
       
       // Create the user in Supabase Auth with metadata that will be used by the trigger
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
@@ -148,33 +148,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             name,
             role,
-          }
+          },
+          emailRedirectTo: window.location.origin,
         }
       });
       
       console.log("Auth signup response:", authData, signUpError);
       
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error("Error in signup:", signUpError);
+        throw signUpError;
+      }
       
       // We rely on the database trigger to create the profile
       // The trigger handle_new_user_auth() will create the profile entry automatically
-      // Add a small delay to ensure the trigger has time to execute
+      
       if (authData.user) {
         // Wait a moment to allow trigger to execute
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Verify that profile was created
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', authData.user.id)
-          .single();
-          
-        if (profileError) {
-          console.warn("Profile may not have been created:", profileError);
-          // Continue anyway as the trigger might still be processing
-        } else {
-          console.log("Profile created successfully:", profile);
+        try {
+          // Verify that profile was created
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, name, role')
+            .eq('id', authData.user.id)
+            .maybeSingle();
+            
+          if (profileError) {
+            console.warn("Error checking profile creation:", profileError);
+          } else if (profile) {
+            console.log("Profile created successfully:", profile);
+          } else {
+            console.warn("Profile not found after signup. Attempting manual creation...");
+            
+            // If profile wasn't created by trigger, create it manually
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: authData.user.id,
+                name: name,
+                role: role,
+                coins: 0
+              });
+              
+            if (insertError) {
+              console.error("Failed to create profile manually:", insertError);
+            } else {
+              console.log("Profile created manually after trigger failure");
+            }
+          }
+        } catch (verifyError) {
+          console.error("Error verifying profile creation:", verifyError);
         }
         
         toast({
