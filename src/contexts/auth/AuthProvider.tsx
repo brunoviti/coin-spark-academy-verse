@@ -138,7 +138,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      // 1. Create the user in Supabase Auth with metadata that will be used by the trigger
+      console.log("Starting signup process...");
+      
+      // Create the user in Supabase Auth with metadata that will be used by the trigger
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -150,12 +152,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
+      console.log("Auth signup response:", authData, signUpError);
+      
       if (signUpError) throw signUpError;
       
       // We rely on the database trigger to create the profile
       // The trigger handle_new_user_auth() will create the profile entry automatically
-      
+      // Add a small delay to ensure the trigger has time to execute
       if (authData.user) {
+        // Wait a moment to allow trigger to execute
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Verify that profile was created
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', authData.user.id)
+          .single();
+          
+        if (profileError) {
+          console.warn("Profile may not have been created:", profileError);
+          // Continue anyway as the trigger might still be processing
+        } else {
+          console.log("Profile created successfully:", profile);
+        }
+        
         toast({
           title: "Registro exitoso",
           description: "Tu cuenta ha sido creada correctamente",

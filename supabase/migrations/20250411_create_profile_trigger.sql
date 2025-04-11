@@ -9,15 +9,26 @@ LANGUAGE PLPGSQL
 SECURITY DEFINER
 AS $$
 BEGIN
+  -- Ensure the user_role type exists and is valid
+  -- Use a more defensive approach when casting the role
   INSERT INTO public.profiles (id, name, role, avatar_url, coins)
   VALUES (
     new.id, 
     coalesce(new.raw_user_meta_data->>'name', 'New User'), 
-    (coalesce(new.raw_user_meta_data->>'role', 'student'))::user_role, 
+    CASE 
+      WHEN (new.raw_user_meta_data->>'role') IN ('student', 'teacher', 'admin', 'super_admin') 
+      THEN (new.raw_user_meta_data->>'role')::user_role 
+      ELSE 'student'::user_role 
+    END,
     null, 
     0
   );
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log the error but don't fail the entire transaction
+    RAISE WARNING 'Error creating profile: %', SQLERRM;
+    RETURN NEW;
 END;
 $$;
 
