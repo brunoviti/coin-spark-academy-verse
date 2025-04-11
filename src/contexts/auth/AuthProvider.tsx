@@ -140,6 +140,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Starting signup process with:", { email, name, role });
       
+      // Obtener la primera escuela disponible para el usuario nuevo
+      let schoolId = undefined;
+      try {
+        const { data: schools } = await supabase
+          .from('schools')
+          .select('id')
+          .limit(1);
+          
+        if (schools && schools.length > 0) {
+          schoolId = schools[0].id;
+          console.log("Found school for new user:", schoolId);
+        }
+      } catch (schoolError) {
+        console.warn("Error fetching schools:", schoolError);
+      }
+      
       // Create the user in Supabase Auth with metadata that will be used by the trigger
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -148,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             name,
             role,
+            school_id: schoolId, // Incluir school_id en los metadatos
           },
           emailRedirectTo: window.location.origin,
         }
@@ -189,7 +206,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 id: authData.user.id,
                 name: name,
                 role: role,
-                coins: 0
+                coins: 0,
+                school_id: schoolId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
               });
               
             if (insertError) {
