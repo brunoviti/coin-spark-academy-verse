@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
-                .single();
+                .maybeSingle();
                 
               if (error) {
                 console.error("Error getting user profile:", error);
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
             
           if (error) throw error;
           
@@ -154,6 +154,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (schoolError) {
         console.warn("Error fetching schools:", schoolError);
+      }
+
+      // Si no hay escuelas, crear una por defecto
+      if (!schoolId) {
+        try {
+          const { data: newSchool, error: schoolCreateError } = await supabase
+            .from('schools')
+            .insert({
+              name: 'Escuela por Defecto',
+              coin_name: 'EduCoin',
+              coin_symbol: 'EDC',
+              max_supply: 10000,
+              current_supply: 0
+            })
+            .select()
+            .single();
+
+          if (schoolCreateError) {
+            console.error("Error creating default school:", schoolCreateError);
+          } else if (newSchool) {
+            schoolId = newSchool.id;
+            console.log("Created default school for new user:", schoolId);
+          }
+        } catch (createSchoolError) {
+          console.error("Error creating default school:", createSchoolError);
+        }
       }
       
       // Create the user in Supabase Auth with metadata that will be used by the trigger
