@@ -5,6 +5,9 @@ import { Database } from "../types";
 // Type assertion for database tables
 type SchoolType = Database['public']['Tables']['schools']['Row'];
 
+// Type for creating a new school - name is required, other fields optional
+type CreateSchoolType = Pick<SchoolType, 'name'> & Partial<Omit<SchoolType, 'name'>>;
+
 /**
  * Obtiene todas las escuelas
  * @returns Array de escuelas
@@ -39,7 +42,7 @@ export const fetchSchoolById = async (schoolId: string): Promise<SchoolType> => 
  * @param schoolData Datos de la escuela
  * @returns La escuela creada
  */
-export const createSchool = async (schoolData: Partial<SchoolType>): Promise<SchoolType> => {
+export const createSchool = async (schoolData: CreateSchoolType): Promise<SchoolType> => {
   const { data, error } = await supabase
     .from('schools')
     .insert(schoolData)

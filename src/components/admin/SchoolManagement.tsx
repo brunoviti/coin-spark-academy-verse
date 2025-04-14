@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { School, Settings, Coins } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { School as SchoolType } from "@/integrations/supabase/helpers";
 
 const SchoolManagement: React.FC<{
-  school: any;
-  onUpdateSchool: (data: any) => void;
+  school: SchoolType;
+  onUpdateSchool: (data: Partial<SchoolType>) => void;
 }> = ({ school, onUpdateSchool }) => {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
