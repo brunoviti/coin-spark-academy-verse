@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 // Configuración de Supabase
-const SUPABASE_URL = "https://whjqvtvkuyucxsmwkthb.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoanF2dHZrdXl1Y3hzbXdrdGhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxMzc5MjQsImV4cCI6MjA1OTcxMzkyNH0.AXL4UnlZLaTdfocWAXoD6oPM5NyDLVaTTBNb4AmxYyU";
+const SUPABASE_URL = 'https://whjqvtvkuyucxsmwkthb.supabase.co'
+const SUPABASE_PUBLISHABLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoanF2dHZrdXl1Y3hzbXdrdGhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxMzc5MjQsImV4cCI6MjA1OTcxMzkyNH0.AXL4UnlZLaTdfocWAXoD6oPM5NyDLVaTTBNb4AmxYyU'
 
 // Cliente de Supabase correctamente configurado para la aplicación
 // Incluye soporte para la base de datos tipada con TypeScript
