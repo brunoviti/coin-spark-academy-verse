@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserRole } from "@/contexts/auth/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Database } from "@/integrations/supabase/types";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ const Index = () => {
     );
   }
 
-  const handleDemoLogin = (role: "student" | "teacher" | "admin" | "super_admin") => {
+  const handleDemoLogin = (role: UserRole) => {
     loginWithRole(role);
     navigate("/dashboard");
   };
@@ -106,6 +107,9 @@ const Index = () => {
       console.error("Signup failed:", error);
     }
   };
+
+  // Utilizar los roles disponibles desde el enum de la base de datos
+  const availableUserRoles: UserRole[] = ["student", "teacher", "admin", "super_admin"];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-invertidos-blue to-blue-800 flex flex-col">

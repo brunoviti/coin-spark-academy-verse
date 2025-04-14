@@ -1,7 +1,8 @@
 
 import { Database } from "@/integrations/supabase/types";
 
-export type UserRole = "student" | "teacher" | "admin" | "super_admin";
+// Usar el mismo tipo de rol definido en Supabase
+export type UserRole = Database["public"]["Enums"]["user_role"];
 
 export interface User {
   id: string;
