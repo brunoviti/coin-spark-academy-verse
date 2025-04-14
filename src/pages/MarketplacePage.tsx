@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import MainLayout from "@/components/layouts/MainLayout";
@@ -14,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { mockMarketplaceItems } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
+import { fetchUserPurchaseHistory } from "@/api/user";
 
 const MarketplacePage = () => {
   const { user } = useAuth();
@@ -21,6 +21,26 @@ const MarketplacePage = () => {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [purchases, setPurchases] = useState([]);
+
+  useEffect(() => {
+    const loadPurchaseHistory = async () => {
+      if (user) {
+        try {
+          const history = await fetchUserPurchaseHistory(user.id);
+          setPurchases(history);
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo cargar el historial de compras",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+
+    loadPurchaseHistory();
+  }, [user]);
 
   if (!user) {
     navigate("/");
