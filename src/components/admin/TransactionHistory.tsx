@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Clock, Search, Download, Filter, RefreshCw, 
-  ArrowUpRight, ArrowDownLeft, CreditCard
+  ArrowUpRight, ArrowDownLeft, CreditCard,
+  ShoppingBag
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/utils";
