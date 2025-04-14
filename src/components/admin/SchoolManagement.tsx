@@ -1,10 +1,14 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { School, Settings, Coins } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { School as SchoolType } from "@/integrations/supabase/helpers";
+import { Database } from "@/integrations/supabase/types";
+
+// Define the School type directly if it's not exported correctly
+type SchoolType = Database['public']['Tables']['schools']['Row'];
 
 const SchoolManagement: React.FC<{
   school: SchoolType;
