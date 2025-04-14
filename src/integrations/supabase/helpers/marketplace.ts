@@ -1,4 +1,3 @@
-
 import { supabase } from "../client";
 import { Database } from "../types";
 
@@ -73,6 +72,26 @@ export const updateItemStock = async (itemId: string, quantity: number): Promise
     .eq('id', itemId)
     .select()
     .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+/**
+ * Obtiene el historial de compras de un usuario
+ * @param studentId ID del estudiante
+ * @returns Historial de compras del usuario
+ */
+export const fetchUserPurchaseHistory = async (studentId: string) => {
+  const { data, error } = await supabase
+    .from('marketplace_purchases')
+    .select(`
+      *,
+      item:item_id (title, description, price, category_id),
+      student:student_id (name)
+    `)
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false });
     
   if (error) throw error;
   return data;
