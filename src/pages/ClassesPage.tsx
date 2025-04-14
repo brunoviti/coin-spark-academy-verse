@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -82,12 +81,14 @@ const ClassesPage = () => {
     }
   };
   
-  const handleCreateClass = (className: string) => {
-    // In a real implementation, this would call a function to create a new class
-    toast({
-      title: "Función en desarrollo",
-      description: "La creación de clases estará disponible próximamente",
-    });
+  const handleCreateClass = async (className: string) => {
+    try {
+      // Recargar las clases después de crear una nueva
+      const updatedClasses = await fetchTeacherClasses(user!.id);
+      setClasses(updatedClasses);
+    } catch (error) {
+      console.error("Error refreshing classes:", error);
+    }
   };
   
   const handleSelectClass = (classId: string) => {

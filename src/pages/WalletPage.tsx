@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import MainLayout from "@/components/layouts/MainLayout";
@@ -13,48 +13,69 @@ import {
   RefreshCw, 
   TrendingUp,
   Filter, 
-  Download
+  Download,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { mockTransactions } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
+import { fetchUserTransactions } from "@/integrations/supabase/helpers/transactions";
 
 const WalletPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [filter, setFilter] = useState("all");
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!user) {
-    navigate("/");
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      navigate("/");
+      return;
+    }
 
-  // Function to calculate wallet balance from transactions
-  const calculateBalance = () => {
-    return mockTransactions.reduce((total, transaction) => {
-      if (transaction.type === "earning") {
-        return total + transaction.amount;
-      } else if (transaction.type === "spending" || transaction.type === "transfer") {
-        return total - transaction.amount;
+    // Only student role should access this page
+    if (user.role !== "student") {
+      navigate("/dashboard");
+      return;
+    }
+
+    const loadTransactions = async () => {
+      try {
+        setIsLoading(true);
+        const data = await fetchUserTransactions(user.id);
+        setTransactions(data);
+      } catch (error) {
+        console.error("Error loading transactions:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las transacciones",
+          variant: "destructive"
+        });
+        setTransactions([]);
+      } finally {
+        setIsLoading(false);
       }
-      return total;
-    }, 0);
-  };
+    };
 
-  // Get stats from transactions
+    loadTransactions();
+  }, [user, navigate, toast]);
+
+  // Function to calculate wallet stats from transactions
   const getStats = () => {
     let earned = 0;
     let spent = 0;
     let transferred = 0;
 
-    mockTransactions.forEach(transaction => {
+    transactions.forEach(transaction => {
       if (transaction.type === "earning") {
         earned += transaction.amount;
       } else if (transaction.type === "spending") {
-        spent += transaction.amount;
-      } else if (transaction.type === "transfer") {
-        transferred += transaction.amount;
+        if (transaction.transaction_type === "p2p_transfer") {
+          transferred += transaction.amount;
+        } else {
+          spent += transaction.amount;
+        }
       }
     });
 
@@ -64,16 +85,10 @@ const WalletPage = () => {
   const stats = getStats();
 
   // Filter transactions based on selected filter
-  const filteredTransactions = mockTransactions.filter(transaction => {
+  const filteredTransactions = transactions.filter(transaction => {
     if (filter === "all") return true;
     return transaction.type === filter;
   });
-
-  // Only student role should access this page
-  if (user.role !== "student") {
-    navigate("/dashboard");
-    return null;
-  }
 
   return (
     <MainLayout title="Mi Billetera">
@@ -86,7 +101,7 @@ const WalletPage = () => {
           <CardContent>
             <div className="flex items-center justify-center py-4">
               <div className="relative">
-                <div className="coin w-24 h-24 text-4xl z-10 relative">{user.coins || calculateBalance()}</div>
+                <div className="coin w-24 h-24 text-4xl z-10 relative">{user?.coins || 0}</div>
                 <div className="absolute -top-2 -left-2 w-28 h-28 rounded-full bg-yellow-200 animate-pulse opacity-30"></div>
               </div>
             </div>
@@ -159,48 +174,60 @@ const WalletPage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredTransactions.length > 0 ? (
-              filteredTransactions.map(transaction => (
-                <div key={transaction.id} className="flex justify-between items-center border-b pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+          {isLoading ? (
+            <div className="py-8 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
+              <p className="text-muted-foreground">Cargando transacciones...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredTransactions.length > 0 ? (
+                filteredTransactions.map(transaction => (
+                  <div key={transaction.id} className="flex justify-between items-center border-b pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        transaction.type === "earning" 
+                          ? "bg-green-100 text-green-600" 
+                          : transaction.transaction_type === "p2p_transfer"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-red-100 text-red-600"
+                      }`}>
+                        {transaction.type === "earning" 
+                          ? <ArrowUpCircle className="h-5 w-5" />
+                          : transaction.transaction_type === "p2p_transfer" 
+                          ? <RefreshCw className="h-5 w-5" />
+                          : <ArrowDownCircle className="h-5 w-5" />
+                        }
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {transaction.description || 
+                           (transaction.type === "earning" 
+                            ? `Recibido de ${transaction.otherPartyName}` 
+                            : `Enviado a ${transaction.otherPartyName}`)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(transaction.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`font-bold ${
                       transaction.type === "earning" 
-                        ? "bg-green-100 text-green-600" 
-                        : transaction.type === "spending"
-                        ? "bg-red-100 text-red-600"
-                        : "bg-blue-100 text-blue-600"
+                        ? "text-green-600" 
+                        : "text-red-600"
                     }`}>
-                      {transaction.type === "earning" 
-                        ? <ArrowUpCircle className="h-5 w-5" />
-                        : transaction.type === "spending" 
-                        ? <ArrowDownCircle className="h-5 w-5" />
-                        : <RefreshCw className="h-5 w-5" />
-                      }
-                    </div>
-                    <div>
-                      <p className="font-medium">{transaction.description}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(transaction.date).toLocaleDateString()}
-                      </p>
+                      {transaction.type === "earning" ? "+" : "-"}{transaction.amount}
                     </div>
                   </div>
-                  <div className={`font-bold ${
-                    transaction.type === "earning" 
-                      ? "text-green-600" 
-                      : "text-red-600"
-                  }`}>
-                    {transaction.type === "earning" ? "+" : "-"}{transaction.amount}
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6">
+                  <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">No hay transacciones para mostrar con este filtro</p>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-6">
-                <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground">No hay transacciones para mostrar con este filtro</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

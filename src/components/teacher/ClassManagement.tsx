@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle, School, Search, Users } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { createClass } from "@/integrations/supabase/helpers/classes";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ClassManagement: React.FC<{
   classes: any[];
@@ -13,10 +15,12 @@ const ClassManagement: React.FC<{
   onCreateClass: (className: string) => void;
 }> = ({ classes, onSelectClass, onCreateClass }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [newClassName, setNewClassName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   
-  const handleCreateClass = () => {
+  const handleCreateClass = async () => {
     if (!newClassName.trim()) {
       toast({
         title: "Nombre requerido",
@@ -26,8 +30,42 @@ const ClassManagement: React.FC<{
       return;
     }
     
-    onCreateClass(newClassName);
-    setNewClassName("");
+    if (!user || !user.schoolId) {
+      toast({
+        title: "Error",
+        description: "No se encontró información de la escuela",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsCreating(true);
+    
+    try {
+      // Llamar a la API para crear la clase
+      await createClass(user.id, user.schoolId, newClassName);
+      
+      // Notificar al usuario
+      toast({
+        title: "Clase creada",
+        description: `La clase "${newClassName}" ha sido creada exitosamente`,
+      });
+      
+      // Actualizar la lista de clases
+      onCreateClass(newClassName);
+      
+      // Limpiar el campo
+      setNewClassName("");
+    } catch (error) {
+      console.error("Error creating class:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear la clase, inténtalo de nuevo",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
   
   const filteredClasses = classes.filter(c => 
@@ -109,9 +147,19 @@ const ClassManagement: React.FC<{
               <Button 
                 className="w-full"
                 onClick={handleCreateClass}
+                disabled={isCreating}
               >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Crear Nueva Clase
+                {isCreating ? (
+                  <div className="flex items-center">
+                    <span className="animate-spin h-4 w-4 border-t-2 border-b-2 border-white rounded-full mr-2"></span>
+                    Creando...
+                  </div>
+                ) : (
+                  <>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Crear Nueva Clase
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>

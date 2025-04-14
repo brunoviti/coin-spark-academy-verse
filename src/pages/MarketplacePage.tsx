@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,14 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ShoppingBag, Search, Filter, Tag, Clock, 
-  Gift, Coffee, Award, Ticket, CreditCard 
+  Gift, Coffee, Award, Ticket, CreditCard, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { mockMarketplaceItems } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
-import { fetchUserPurchaseHistory, createMarketplacePurchase } from "@/api/user";
+import { fetchMarketplaceItems } from "@/integrations/supabase/helpers";
+import { fetchUserPurchaseHistory } from "@/integrations/supabase/helpers/marketplace";
+import { createPurchaseTransaction } from "@/integrations/supabase/helpers/transactions";
 import PurchaseHistory from "@/components/PurchaseHistory";
 
 const MarketplacePage = () => {
@@ -23,35 +26,60 @@ const MarketplacePage = () => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [purchases, setPurchases] = useState([]);
+  const [items, setItems] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadPurchaseHistory = async () => {
-      if (user) {
+    if (!user) {
+      navigate("/");
+      return;
+    }
+
+    // Cargar artículos del mercado y el historial de compras
+    const loadMarketplaceData = async () => {
+      setIsLoading(true);
+      try {
+        // Cargar artículos si hay ID de escuela
+        if (user.schoolId) {
+          try {
+            const marketplaceItems = await fetchMarketplaceItems(user.schoolId);
+            setItems(marketplaceItems);
+          } catch (error) {
+            console.error("Error loading marketplace items:", error);
+            // Fallback a datos de ejemplo
+            setItems(mockMarketplaceItems);
+          }
+        } else {
+          // Usar datos de ejemplo si no hay ID de escuela
+          setItems(mockMarketplaceItems);
+        }
+
+        // Cargar historial de compras
         try {
           const history = await fetchUserPurchaseHistory(user.id);
           setPurchases(history);
         } catch (error) {
+          console.error("Error loading purchase history:", error);
+          setPurchases([]);
           toast({
-            title: "Error",
+            title: "Aviso",
             description: "No se pudo cargar el historial de compras",
             variant: "destructive"
           });
         }
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadPurchaseHistory();
-  }, [user]);
-
-  if (!user) {
-    navigate("/");
-    return null;
-  }
+    loadMarketplaceData();
+  }, [user, navigate, toast]);
 
   // Filter marketplace items based on category
-  const filteredItems = mockMarketplaceItems.filter(item => {
+  const filteredItems = items.filter(item => {
     if (filter === "all") return true;
-    return item.category === filter;
+    return item.category === filter || item.categoryName === filter;
   });
 
   // Further filter based on search term
@@ -64,30 +92,71 @@ const MarketplacePage = () => {
   });
 
   // Calculate balance
-  const balance = user.coins || 125; // Using either the user balance or default to 125 coins
+  const balance = user?.coins || 0;
 
   // Handle purchase
-  const handlePurchase = async (item) => {
+  const handlePurchase = async (item: any) => {
+    // Si no hay usuario o escuela, no se puede comprar
+    if (!user || !user.schoolId) {
+      toast({
+        title: "Error",
+        description: "No se pudo completar la compra. Información de usuario incompleta.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verificar saldo
+    if (balance < item.price) {
+      toast({
+        title: "Saldo insuficiente",
+        description: `Necesitas ${item.price - balance} monedas más para esta compra`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsPurchasing(item.id);
+
     try {
-      await createMarketplacePurchase(user.id, item.id, 1, item.price);
+      // Crear la transacción de compra (actualiza saldo y stock)
+      await createPurchaseTransaction(
+        user.id,
+        item.id,
+        user.schoolId,
+        1,  // Cantidad fija de 1 por ahora
+        item.price
+      );
+
       // Recargar el historial
       const updatedHistory = await fetchUserPurchaseHistory(user.id);
       setPurchases(updatedHistory);
+
+      // Recargar los artículos para actualizar el stock
+      if (user.schoolId) {
+        const updatedItems = await fetchMarketplaceItems(user.schoolId);
+        setItems(updatedItems);
+      }
+
+      // Notificar al usuario
       toast({
         title: "¡Compra exitosa!",
         description: `Has comprado: ${item.title}`,
       });
     } catch (error) {
+      console.error("Error completing purchase:", error);
       toast({
         title: "Error",
-        description: "No se pudo completar la compra",
+        description: "No se pudo completar la compra: " + (error as Error).message,
         variant: "destructive"
       });
+    } finally {
+      setIsPurchasing(null);
     }
   };
 
   // Get category icon based on category name
-  const getCategoryIcon = (category) => {
+  const getCategoryIcon = (category: string) => {
     switch (category) {
       case "coupons":
         return <Tag className="h-4 w-4" />;
@@ -150,7 +219,12 @@ const MarketplacePage = () => {
           </Tabs>
         </CardHeader>
         <CardContent>
-          {searchedItems.length > 0 ? (
+          {isLoading ? (
+            <div className="py-12 text-center">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
+              <p className="text-muted-foreground">Cargando artículos del mercado...</p>
+            </div>
+          ) : searchedItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {searchedItems.map(item => (
                 <div key={item.id} className="marketplace-item">
@@ -174,8 +248,8 @@ const MarketplacePage = () => {
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="outline" className="flex items-center gap-1">
-                        {getCategoryIcon(item.category)}
-                        <span className="capitalize text-xs">{item.category}</span>
+                        {getCategoryIcon(item.category || item.categoryName)}
+                        <span className="capitalize text-xs">{item.category || item.categoryName}</span>
                       </Badge>
                       <div className="flex items-center">
                         <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-yellow-800 text-xs font-bold mr-1">
@@ -193,10 +267,15 @@ const MarketplacePage = () => {
                       </div>
                       <Button 
                         size="sm"
-                        disabled={item.stock <= 0 || balance < item.price}
+                        disabled={item.stock <= 0 || balance < item.price || isPurchasing !== null}
                         onClick={() => handlePurchase(item)}
                       >
-                        Comprar
+                        {isPurchasing === item.id ? (
+                          <span className="flex items-center">
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            Comprando...
+                          </span>
+                        ) : "Comprar"}
                       </Button>
                     </div>
                   </div>

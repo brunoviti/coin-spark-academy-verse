@@ -1,12 +1,11 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import MainLayout from "@/components/layouts/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { 
   BarChart3, Search, Filter, Plus, 
-  UserPlus, ArrowLeftRight, Share2, Users
+  UserPlus, ArrowLeftRight, Share2, Users, Calendar, User, BookOpen, Music, Laptop
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,36 +13,76 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { mockExchangeListings } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
+import { fetchExchangeListings } from "@/integrations/supabase/helpers/exchange";
+import ExchangeListingForm from "@/components/ExchangeListingForm";
 
 const ExchangePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [listings, setListings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
-  if (!user) {
-    navigate("/");
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      navigate("/");
+      return;
+    }
 
-  // Only student role should access this page
-  if (user.role !== "student") {
-    navigate("/dashboard");
-    return null;
-  }
+    // Only student role should access this page
+    if (user.role !== "student") {
+      navigate("/dashboard");
+      return;
+    }
+
+    const loadListings = async () => {
+      if (user.schoolId) {
+        try {
+          setIsLoading(true);
+          const data = await fetchExchangeListings(user.schoolId, true);
+          setListings(data);
+        } catch (error) {
+          console.error("Error loading exchange listings:", error);
+          // Fallback a datos de ejemplo
+          setListings(mockExchangeListings);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setListings(mockExchangeListings);
+        setIsLoading(false);
+      }
+    };
+
+    loadListings();
+  }, [user, navigate]);
 
   // Calculate balance
-  const balance = user.coins || 125; // Using either the user balance or default to 125 coins
+  const balance = user?.coins || 125; // Using either the user balance or default to 125 coins
 
   // Handle making a new listing
   const handleNewListing = () => {
-    toast({
-      title: "Función en desarrollo",
-      description: "La creación de nuevos anuncios estará disponible próximamente",
-    });
+    setShowCreateForm(true);
+  };
+
+  // Handle form submission success
+  const handleFormSuccess = async () => {
+    setShowCreateForm(false);
+    // Recargar los anuncios
+    if (user?.schoolId) {
+      try {
+        const data = await fetchExchangeListings(user.schoolId, true);
+        setListings(data);
+      } catch (error) {
+        console.error("Error reloading listings:", error);
+      }
+    }
   };
 
   // Handle accepting a listing
-  const handleAcceptListing = (listing) => {
+  const handleAcceptListing = (listing: any) => {
     if (balance < listing.price) {
       toast({
         title: "Saldo insuficiente",
@@ -55,9 +94,31 @@ const ExchangePage = () => {
 
     toast({
       title: "¡Transacción exitosa!",
-      description: `Has intercambiado con ${listing.studentName} por ${listing.price} monedas`,
+      description: `Has intercambiado con ${listing.studentName || listing.sellerName} por ${listing.price || listing.asking_price} monedas`,
     });
   };
+
+  // Filtrar anuncios por búsqueda
+  const filteredListings = listings.filter(listing => {
+    if (!searchTerm) return true;
+    
+    const title = listing.title ? listing.title.toLowerCase() : '';
+    const description = listing.description ? listing.description.toLowerCase() : '';
+    const search = searchTerm.toLowerCase();
+    
+    return title.includes(search) || description.includes(search);
+  });
+
+  if (showCreateForm) {
+    return (
+      <MainLayout title="Crear Anuncio">
+        <ExchangeListingForm 
+          onSuccess={handleFormSuccess} 
+          onCancel={() => setShowCreateForm(false)} 
+        />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout title="Zona de Intercambio">
@@ -78,6 +139,8 @@ const ExchangePage = () => {
             <Input 
               placeholder="Buscar en la bolsa" 
               className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Button className="shrink-0" onClick={handleNewListing}>
@@ -103,57 +166,81 @@ const ExchangePage = () => {
             </TabsList>
 
             <TabsContent value="listings">
-              <div className="pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {mockExchangeListings.map(listing => (
-                  <Card key={listing.id} className="overflow-hidden">
-                    <div className="bg-blue-50 p-4">
-                      <div className="flex justify-between">
-                        <Badge className="bg-blue-500">{`${listing.price} monedas`}</Badge>
-                        <Badge variant="outline" className="bg-white">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {new Date(listing.date).toLocaleDateString()}
-                        </Badge>
-                      </div>
-                      <h3 className="font-bold mt-3 mb-1">{listing.title}</h3>
-                      <p className="text-sm text-muted-foreground">{listing.description}</p>
-                    </div>
-                    <CardFooter className="flex flex-col items-stretch gap-4 pt-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          <User className="h-5 w-5 text-gray-500" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{listing.studentName}</p>
-                          <p className="text-xs text-muted-foreground">Estudiante</p>
-                        </div>
-                      </div>
-                      <Button 
-                        className="w-full"
-                        onClick={() => handleAcceptListing(listing)}
-                      >
-                        <ArrowLeftRight className="h-4 w-4 mr-2" />
-                        Intercambiar
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+              {isLoading ? (
+                <div className="py-12 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Cargando anuncios...</p>
+                </div>
+              ) : (
+                <div className="pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredListings.length > 0 ? (
+                    <>
+                      {filteredListings.map(listing => (
+                        <Card key={listing.id} className="overflow-hidden">
+                          <div className="bg-blue-50 p-4">
+                            <div className="flex justify-between">
+                              <Badge className="bg-blue-500">{`${listing.asking_price || listing.price} monedas`}</Badge>
+                              <Badge variant="outline" className="bg-white">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {new Date(listing.created_at).toLocaleDateString()}
+                              </Badge>
+                            </div>
+                            <h3 className="font-bold mt-3 mb-1">{listing.title}</h3>
+                            <p className="text-sm text-muted-foreground">{listing.description}</p>
+                          </div>
+                          <CardFooter className="flex flex-col items-stretch gap-4 pt-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <User className="h-5 w-5 text-gray-500" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">{listing.sellerName || listing.studentName}</p>
+                                <p className="text-xs text-muted-foreground">Estudiante</p>
+                              </div>
+                            </div>
+                            <Button 
+                              className="w-full"
+                              onClick={() => handleAcceptListing(listing)}
+                              disabled={user?.id === listing.seller_id}
+                            >
+                              <ArrowLeftRight className="h-4 w-4 mr-2" />
+                              {user?.id === listing.seller_id ? "Tu anuncio" : "Intercambiar"}
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
 
-                <Card className="border-dashed">
-                  <CardContent className="pt-6 pb-6 flex flex-col items-center justify-center h-full">
-                    <Plus className="h-12 w-12 text-muted-foreground mb-2" />
-                    <p className="text-muted-foreground text-center">
-                      ¿Tienes alguna habilidad o conocimiento para compartir?
-                    </p>
-                    <Button 
-                      className="mt-4" 
-                      variant="outline"
-                      onClick={handleNewListing}
-                    >
-                      Crear Nuevo Anuncio
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
+                      <Card className="border-dashed">
+                        <CardContent className="pt-6 pb-6 flex flex-col items-center justify-center h-full">
+                          <Plus className="h-12 w-12 text-muted-foreground mb-2" />
+                          <p className="text-muted-foreground text-center">
+                            ¿Tienes alguna habilidad o conocimiento para compartir?
+                          </p>
+                          <Button 
+                            className="mt-4" 
+                            variant="outline"
+                            onClick={handleNewListing}
+                          >
+                            Crear Nuevo Anuncio
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </>
+                  ) : (
+                    <div className="col-span-full text-center py-12">
+                      <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-muted-foreground">No hay anuncios que coincidan con tu búsqueda</p>
+                      <Button 
+                        className="mt-4" 
+                        variant="outline"
+                        onClick={() => setSearchTerm("")}
+                      >
+                        Mostrar todos los anuncios
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="my-listings">
@@ -285,7 +372,8 @@ const ExchangePage = () => {
   );
 };
 
-// Adding missing icon imports
+export default ExchangePage;
+
 const BookOpen = (props) => {
   return (
     <svg
@@ -387,5 +475,3 @@ const Calendar = (props) => {
     </svg>
   );
 };
-
-export default ExchangePage;
