@@ -199,3 +199,51 @@ export const fetchUserTransactions = async (userId: string): Promise<any[]> => {
     };
   });
 };
+
+/**
+ * Obtiene todas las transacciones de una escuela
+ * @param schoolId ID de la escuela
+ * @returns Lista de todas las transacciones
+ */
+export const fetchAllTransactions = async (schoolId: string): Promise<any[]> => {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(`
+      *,
+      sender:sender_id (id, name, email),
+      receiver:receiver_id (id, name, email)
+    `)
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false });
+    
+  if (error) throw error;
+  
+  return data;
+};
+
+/**
+ * Asigna monedas a un usuario (recompensa)
+ * @param senderId ID del remitente (profesor o admin)
+ * @param receiverId ID del destinatario
+ * @param amount Cantidad de monedas
+ * @param schoolId ID de la escuela
+ * @param description Descripción de la asignación (opcional)
+ * @returns La transacción creada
+ */
+export const assignCoins = async (
+  senderId: string,
+  receiverId: string,
+  amount: number,
+  schoolId: string,
+  description?: string
+): Promise<TransactionType> => {
+  return createTransaction(
+    senderId,
+    receiverId,
+    amount,
+    'reward',
+    schoolId,
+    undefined,
+    description || 'Asignación de monedas'
+  );
+};

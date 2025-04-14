@@ -6,6 +6,8 @@ export * from './achievements';
 export * from './marketplace';
 export * from './exchange';
 export * from './classes';
+export * from './transactions';
+export * from './admin';
 
 // Además, podemos exportar tipos útiles aquí para reutilizarlos
 import { Database } from '../types';
