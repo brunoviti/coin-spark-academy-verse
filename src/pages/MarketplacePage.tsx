@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { mockMarketplaceItems } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
-import { fetchUserPurchaseHistory } from "@/api/user";
+import { fetchUserPurchaseHistory, createMarketplacePurchase } from "@/api/user";
 import PurchaseHistory from "@/components/PurchaseHistory";
 
 const MarketplacePage = () => {
@@ -67,29 +67,23 @@ const MarketplacePage = () => {
   const balance = user.coins || 125; // Using either the user balance or default to 125 coins
 
   // Handle purchase
-  const handlePurchase = (item) => {
-    if (balance < item.price) {
+  const handlePurchase = async (item) => {
+    try {
+      await createMarketplacePurchase(user.id, item.id, 1, item.price);
+      // Recargar el historial
+      const updatedHistory = await fetchUserPurchaseHistory(user.id);
+      setPurchases(updatedHistory);
       toast({
-        title: "Saldo insuficiente",
-        description: `Necesitas ${item.price - balance} monedas más para comprar este artículo`,
+        title: "¡Compra exitosa!",
+        description: `Has comprado: ${item.title}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo completar la compra",
         variant: "destructive"
       });
-      return;
     }
-
-    if (item.stock <= 0) {
-      toast({
-        title: "Artículo agotado",
-        description: "Este artículo no está disponible actualmente",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    toast({
-      title: "¡Compra exitosa!",
-      description: `Has comprado: ${item.title} por ${item.price} monedas`,
-    });
   };
 
   // Get category icon based on category name
