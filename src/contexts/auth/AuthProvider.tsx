@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -10,6 +9,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
+
+  // Añadir logs en el cuerpo principal
+  console.log('[AUTH Provider Render] User State:', user);
+  console.log('[AUTH Provider Render] IsLoading State:', isLoading);
 
   // Check for existing session on component mount
   useEffect(() => {
@@ -28,6 +31,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .eq('id', session.user.id)
                 .maybeSingle();
                 
+              // Añadir log antes de actualizar el estado
+              console.log('[AUTH] Profile data received:', profile);
+              
               if (error) {
                 console.error("Error getting user profile:", error);
                 return;
@@ -42,6 +48,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   coins: profile.coins as number | undefined,
                   schoolId: profile.school_id as string | undefined
                 });
+                
+                // Añadir log después de actualizar el estado
+                console.log('[AUTH] User state updated in AuthProvider');
               }
             } catch (error) {
               console.error("Error in auth state change:", error);
