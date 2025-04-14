@@ -5,7 +5,8 @@ import MainLayout from "@/components/layouts/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { 
   BarChart3, Search, Filter, Plus, 
-  UserPlus, ArrowLeftRight, Share2, Users, Calendar, User, BookOpen, Music, Laptop
+  UserPlus, ArrowLeftRight, Share2, Users, Calendar as CalendarIcon, User as UserIcon, 
+  BookOpen as BookOpenIcon, Music as MusicIcon, Laptop as LaptopIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,6 @@ const ExchangePage = () => {
       return;
     }
 
-    // Only student role should access this page
     if (user.role !== "student") {
       navigate("/dashboard");
       return;
@@ -45,7 +45,6 @@ const ExchangePage = () => {
           setListings(data);
         } catch (error) {
           console.error("Error loading exchange listings:", error);
-          // Fallback a datos de ejemplo
           setListings(mockExchangeListings);
         } finally {
           setIsLoading(false);
@@ -59,18 +58,14 @@ const ExchangePage = () => {
     loadListings();
   }, [user, navigate]);
 
-  // Calculate balance
-  const balance = user?.coins || 125; // Using either the user balance or default to 125 coins
+  const balance = user?.coins || 125;
 
-  // Handle making a new listing
   const handleNewListing = () => {
     setShowCreateForm(true);
   };
 
-  // Handle form submission success
   const handleFormSuccess = async () => {
     setShowCreateForm(false);
-    // Recargar los anuncios
     if (user?.schoolId) {
       try {
         const data = await fetchExchangeListings(user.schoolId, true);
@@ -81,7 +76,6 @@ const ExchangePage = () => {
     }
   };
 
-  // Handle accepting a listing
   const handleAcceptListing = (listing: any) => {
     if (balance < listing.price) {
       toast({
@@ -98,7 +92,6 @@ const ExchangePage = () => {
     });
   };
 
-  // Filtrar anuncios por búsqueda
   const filteredListings = listings.filter(listing => {
     if (!searchTerm) return true;
     
@@ -181,7 +174,7 @@ const ExchangePage = () => {
                             <div className="flex justify-between">
                               <Badge className="bg-blue-500">{`${listing.asking_price || listing.price} monedas`}</Badge>
                               <Badge variant="outline" className="bg-white">
-                                <Calendar className="h-3 w-3 mr-1" />
+                                <CalendarIcon className="h-3 w-3 mr-1" />
                                 {new Date(listing.created_at).toLocaleDateString()}
                               </Badge>
                             </div>
@@ -191,7 +184,7 @@ const ExchangePage = () => {
                           <CardFooter className="flex flex-col items-stretch gap-4 pt-4">
                             <div className="flex items-center gap-2">
                               <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <User className="h-5 w-5 text-gray-500" />
+                                <UserIcon className="h-5 w-5 text-gray-500" />
                               </div>
                               <div>
                                 <p className="font-medium text-sm">{listing.sellerName || listing.studentName}</p>
@@ -287,7 +280,7 @@ const ExchangePage = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                    <BookOpen className="h-5 w-5" />
+                    <BookOpenIcon className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-medium">Tutoría Académica</p>
@@ -299,7 +292,7 @@ const ExchangePage = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
-                    <Music className="h-5 w-5" />
+                    <MusicIcon className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-medium">Música y Arte</p>
@@ -311,7 +304,7 @@ const ExchangePage = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                    <Laptop className="h-5 w-5" />
+                    <LaptopIcon className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-medium">Tecnología</p>
@@ -376,102 +369,30 @@ export default ExchangePage;
 
 const BookOpen = (props) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-    </svg>
+    <BookOpenIcon {...props} />
   );
 };
 
 const Music = (props) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M9 18V5l12-2v13" />
-      <circle cx="6" cy="18" r="3" />
-      <circle cx="18" cy="16" r="3" />
-    </svg>
+    <MusicIcon {...props} />
   );
 };
 
 const Laptop = (props) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16" />
-    </svg>
+    <LaptopIcon {...props} />
   );
 };
 
 const User = (props) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
+    <UserIcon {...props} />
   );
 };
 
 const Calendar = (props) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
+    <CalendarIcon {...props} />
   );
 };

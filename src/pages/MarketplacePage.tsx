@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { fetchMarketplaceItems } from "@/integrations/supabase/helpers";
 import { fetchUserPurchaseHistory } from "@/integrations/supabase/helpers/marketplace";
 import { createPurchaseTransaction } from "@/integrations/supabase/helpers/transactions";
-import PurchaseHistory from "@/components/PurchaseHistory";
+import PurchaseHistory from "@/components/marketplace/PurchaseHistory";
 
 const MarketplacePage = () => {
   const { user } = useAuth();
@@ -36,26 +35,21 @@ const MarketplacePage = () => {
       return;
     }
 
-    // Cargar artículos del mercado y el historial de compras
     const loadMarketplaceData = async () => {
       setIsLoading(true);
       try {
-        // Cargar artículos si hay ID de escuela
         if (user.schoolId) {
           try {
             const marketplaceItems = await fetchMarketplaceItems(user.schoolId);
             setItems(marketplaceItems);
           } catch (error) {
             console.error("Error loading marketplace items:", error);
-            // Fallback a datos de ejemplo
             setItems(mockMarketplaceItems);
           }
         } else {
-          // Usar datos de ejemplo si no hay ID de escuela
           setItems(mockMarketplaceItems);
         }
 
-        // Cargar historial de compras
         try {
           const history = await fetchUserPurchaseHistory(user.id);
           setPurchases(history);
@@ -76,13 +70,11 @@ const MarketplacePage = () => {
     loadMarketplaceData();
   }, [user, navigate, toast]);
 
-  // Filter marketplace items based on category
   const filteredItems = items.filter(item => {
     if (filter === "all") return true;
     return item.category === filter || item.categoryName === filter;
   });
 
-  // Further filter based on search term
   const searchedItems = filteredItems.filter(item => {
     if (!search) return true;
     return (
@@ -91,12 +83,9 @@ const MarketplacePage = () => {
     );
   });
 
-  // Calculate balance
   const balance = user?.coins || 0;
 
-  // Handle purchase
   const handlePurchase = async (item: any) => {
-    // Si no hay usuario o escuela, no se puede comprar
     if (!user || !user.schoolId) {
       toast({
         title: "Error",
@@ -106,7 +95,6 @@ const MarketplacePage = () => {
       return;
     }
 
-    // Verificar saldo
     if (balance < item.price) {
       toast({
         title: "Saldo insuficiente",
@@ -119,26 +107,22 @@ const MarketplacePage = () => {
     setIsPurchasing(item.id);
 
     try {
-      // Crear la transacción de compra (actualiza saldo y stock)
       await createPurchaseTransaction(
         user.id,
         item.id,
         user.schoolId,
-        1,  // Cantidad fija de 1 por ahora
+        1,
         item.price
       );
 
-      // Recargar el historial
       const updatedHistory = await fetchUserPurchaseHistory(user.id);
       setPurchases(updatedHistory);
 
-      // Recargar los artículos para actualizar el stock
       if (user.schoolId) {
         const updatedItems = await fetchMarketplaceItems(user.schoolId);
         setItems(updatedItems);
       }
 
-      // Notificar al usuario
       toast({
         title: "¡Compra exitosa!",
         description: `Has comprado: ${item.title}`,
@@ -155,7 +139,6 @@ const MarketplacePage = () => {
     }
   };
 
-  // Get category icon based on category name
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "coupons":
