@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { mockMarketplaceItems } from "@/data/mockData";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchUserPurchaseHistory } from "@/api/user";
+import PurchaseHistory from "@/components/PurchaseHistory";
 
 const MarketplacePage = () => {
   const { user } = useAuth();
@@ -218,27 +219,7 @@ const MarketplacePage = () => {
       </Card>
 
       <div className="mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Histórico de Compras</CardTitle>
-            <CardDescription>Artículos adquiridos previamente</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center py-6">
-            <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground mb-4">No tienes compras recientes</p>
-            <Button 
-              variant="outline"
-              onClick={() => {
-                toast({
-                  title: "Función en desarrollo",
-                  description: "El historial de compras estará disponible próximamente",
-                });
-              }}
-            >
-              Ver historial completo
-            </Button>
-          </CardContent>
-        </Card>
+        <PurchaseHistory purchases={purchases} />
       </div>
     </MainLayout>
   );
