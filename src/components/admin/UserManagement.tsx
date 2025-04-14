@@ -18,7 +18,7 @@ import {
   DollarSign, School, RefreshCw, UserCheck, Download, Upload 
 } from "lucide-react";
 import { fetchAllStudents, fetchAllTeachers, createNewUser, updateUserBalance, assignCoinsToUser } from "@/integrations/supabase/helpers/admin";
-import { fetchClasses } from "@/integrations/supabase/helpers/classes";
+import { fetchSchoolClasses } from '@/integrations/supabase/helpers/classes'
 import { assignStudentToClass } from "@/integrations/supabase/helpers/admin";
 
 const UserManagement = () => {
@@ -70,7 +70,7 @@ const UserManagement = () => {
         setTeachers(teachersData);
         
         // Cargar clases
-        const classesData = await fetchClasses(user.schoolId as string);
+        const classesData = await fetchSchoolClasses(user.schoolId as string);
         setClasses(classesData);
       } catch (error) {
         console.error("Error cargando datos:", error);
