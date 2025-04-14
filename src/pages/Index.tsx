@@ -1,38 +1,21 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { GraduationCap, School, UserCog, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserRole } from "@/contexts/auth/types";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Database } from "@/integrations/supabase/types";
+import LoginForm from "@/components/auth/LoginForm";
+import SignupForm from "@/components/auth/SignupForm";
+import DemoLogin from "@/components/auth/DemoLogin";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { loginWithRole, login, signup, isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
 
-  // Login form state
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  
-  // Signup form state
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [name, setName] = useState("");
-  const [selectedRole, setSelectedRole] = useState<UserRole>("student");
-
   // Redirect if already authenticated
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       navigate("/dashboard");
     }
@@ -50,66 +33,8 @@ const Index = () => {
   }
 
   const handleDemoLogin = (role: UserRole) => {
-    loginWithRole(role);
     navigate("/dashboard");
   };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await login(email, password);
-      // Navigation happens automatically via the useEffect
-    } catch (error) {
-      // Error is handled in the login function
-      console.error("Login failed:", error);
-    }
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!signupEmail || !signupPassword || !name) {
-      toast({
-        title: "Error",
-        description: "Por favor completa todos los campos obligatorios",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (signupPassword !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Las contraseñas no coinciden",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (signupPassword.length < 6) {
-      toast({
-        title: "Error",
-        description: "La contraseña debe tener al menos 6 caracteres",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      await signup(signupEmail, signupPassword, name, selectedRole);
-      setActiveTab("login");
-      toast({
-        title: "Registro exitoso",
-        description: "Por favor inicia sesión con tus nuevas credenciales",
-      });
-    } catch (error) {
-      // Error is handled in signup function
-      console.error("Signup failed:", error);
-    }
-  };
-
-  // Utilizar los roles disponibles desde el enum de la base de datos
-  const availableUserRoles: UserRole[] = ["student", "teacher", "admin", "super_admin"];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-invertidos-blue to-blue-800 flex flex-col">
@@ -139,156 +64,15 @@ const Index = () => {
                 </TabsList>
                 
                 <TabsContent value="login">
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Correo electrónico</Label>
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        placeholder="tu@correo.com" 
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Contraseña</Label>
-                      <Input 
-                        id="password" 
-                        type="password" 
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full bg-invertidos-blue hover:bg-blue-700">
-                      Iniciar Sesión
-                    </Button>
-                  </form>
+                  <LoginForm />
                 </TabsContent>
                 
                 <TabsContent value="signup">
-                  <form onSubmit={handleSignup} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">Nombre completo</Label>
-                      <Input 
-                        id="signup-name" 
-                        type="text" 
-                        placeholder="Tu nombre" 
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Correo electrónico</Label>
-                      <Input 
-                        id="signup-email" 
-                        type="email" 
-                        placeholder="tu@correo.com" 
-                        value={signupEmail}
-                        onChange={e => setSignupEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Contraseña</Label>
-                      <Input 
-                        id="signup-password" 
-                        type="password" 
-                        placeholder="Mínimo 6 caracteres"
-                        value={signupPassword}
-                        onChange={e => setSignupPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-password">Confirmar contraseña</Label>
-                      <Input 
-                        id="confirm-password" 
-                        type="password" 
-                        placeholder="Confirma tu contraseña"
-                        value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Selecciona tu rol</Label>
-                      <RadioGroup 
-                        className="flex gap-4 pt-2" 
-                        defaultValue="student"
-                        value={selectedRole}
-                        onValueChange={(value) => setSelectedRole(value as UserRole)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="student" id="student" />
-                          <Label htmlFor="student" className="flex items-center gap-1">
-                            <GraduationCap className="h-4 w-4" />
-                            <span>Estudiante</span>
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="teacher" id="teacher" />
-                          <Label htmlFor="teacher" className="flex items-center gap-1">
-                            <School className="h-4 w-4" />
-                            <span>Profesor</span>
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <Button type="submit" className="w-full bg-invertidos-blue hover:bg-blue-700">
-                      Crear Cuenta
-                    </Button>
-                  </form>
+                  <SignupForm onSignupSuccess={() => setActiveTab("login")} />
                 </TabsContent>
                 
                 <TabsContent value="demo">
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground text-center">
-                      Selecciona un rol para explorar la aplicación en modo demo:
-                    </p>
-                    
-                    <div className="grid grid-cols-1 gap-3">
-                      <Button 
-                        variant="outline" 
-                        className="h-20 flex flex-col items-center justify-center gap-1 hover:bg-blue-50"
-                        onClick={() => handleDemoLogin("student")}
-                      >
-                        <GraduationCap className="h-6 w-6 text-invertidos-blue" />
-                        <span>Estudiante</span>
-                      </Button>
-                      
-                      <Button 
-                        variant="outline" 
-                        className="h-20 flex flex-col items-center justify-center gap-1 hover:bg-blue-50"
-                        onClick={() => handleDemoLogin("teacher")}
-                      >
-                        <School className="h-6 w-6 text-invertidos-blue" />
-                        <span>Profesor</span>
-                      </Button>
-                      
-                      <Button 
-                        variant="outline" 
-                        className="h-20 flex flex-col items-center justify-center gap-1 hover:bg-blue-50"
-                        onClick={() => handleDemoLogin("admin")}
-                      >
-                        <UserCog className="h-6 w-6 text-invertidos-blue" />
-                        <span>Administrador</span>
-                      </Button>
-                      
-                      <Button 
-                        variant="outline" 
-                        className="h-20 flex flex-col items-center justify-center gap-1 hover:bg-blue-50"
-                        onClick={() => handleDemoLogin("super_admin")}
-                      >
-                        <Shield className="h-6 w-6 text-invertidos-blue" />
-                        <span>Super Administrador</span>
-                      </Button>
-                    </div>
-                  </div>
+                  <DemoLogin onLogin={handleDemoLogin} />
                 </TabsContent>
               </Tabs>
             </CardContent>
