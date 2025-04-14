@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +13,14 @@ const Index = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
 
+  // Añadir log en el cuerpo principal
+  console.log('[Index Render] IsAuthenticated:', isAuthenticated, 'IsLoading:', isLoading);
+
   // Redirect if already authenticated
   useEffect(() => {
+    console.log('[Index Effect] Running redirect check. IsAuthenticated:', isAuthenticated);
     if (isAuthenticated) {
+      console.log('[Index Effect] User is authenticated, navigating to /dashboard...');
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
