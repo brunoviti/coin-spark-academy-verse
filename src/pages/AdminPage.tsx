@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import MainLayout from "@/components/layouts/MainLayout";
@@ -7,19 +7,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Settings, Users, ShoppingBag, BarChart3, 
-  Clock, Database, FileText, Award
+  School, Database, FileText, Award, Building, Globe
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Importamos los componentes de administración
 import SystemStats from "@/components/admin/SystemStats";
 import UserManagement from "@/components/admin/UserManagement";
 import MarketplaceManagement from "@/components/admin/MarketplaceManagement";
 import TransactionHistory from "@/components/admin/TransactionHistory";
+import SchoolsManagement from "@/components/admin/SchoolsManagement";
 
 const AdminPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("overview");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user && user.role === "super_admin") {
+      setIsSuperAdmin(true);
+    }
+  }, [user]);
 
   if (!user) {
     navigate("/");
@@ -39,12 +49,18 @@ const AdminPage = () => {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Administración del Sistema</CardTitle>
-          <CardDescription>Gestiona todos los aspectos de la plataforma</CardDescription>
+          <CardTitle>
+            {isSuperAdmin ? "Administración General del Sistema" : "Administración del Sistema"}
+          </CardTitle>
+          <CardDescription>
+            {isSuperAdmin 
+              ? "Gestiona todos los aspectos de la plataforma a nivel global" 
+              : "Gestiona todos los aspectos de la plataforma"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-4">
+            <TabsList className={`grid ${isMobile ? "grid-cols-2 gap-y-2" : "grid-cols-5"} mb-4`}>
               <TabsTrigger value="users">
                 <Users className="h-4 w-4 mr-2" />
                 Usuarios
@@ -57,6 +73,12 @@ const AdminPage = () => {
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Reportes
               </TabsTrigger>
+              {isSuperAdmin && (
+                <TabsTrigger value="schools">
+                  <Building className="h-4 w-4 mr-2" />
+                  Escuelas
+                </TabsTrigger>
+              )}
               <TabsTrigger value="settings">
                 <Settings className="h-4 w-4 mr-2" />
                 Configuración
@@ -115,6 +137,12 @@ const AdminPage = () => {
               </div>
             </TabsContent>
 
+            {isSuperAdmin && (
+              <TabsContent value="schools">
+                <SchoolsManagement />
+              </TabsContent>
+            )}
+
             <TabsContent value="settings">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <Card className="bg-white hover:bg-gray-50 transition-colors cursor-pointer">
@@ -128,6 +156,20 @@ const AdminPage = () => {
                     </p>
                   </CardContent>
                 </Card>
+
+                {isSuperAdmin && (
+                  <Card className="bg-white hover:bg-gray-50 transition-colors cursor-pointer">
+                    <CardContent className="p-6 flex flex-col items-center text-center">
+                      <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mb-4">
+                        <Globe className="h-6 w-6" />
+                      </div>
+                      <h3 className="font-medium mb-1">Configuración Global</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Ajustes a nivel de sistema
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </TabsContent>
           </Tabs>
