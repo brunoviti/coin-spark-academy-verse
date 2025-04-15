@@ -410,6 +410,7 @@ const UserManagement = () => {
                       <SelectItem value="student">Estudiante</SelectItem>
                       <SelectItem value="teacher">Profesor</SelectItem>
                       <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="super_admin">Super Administrador</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
