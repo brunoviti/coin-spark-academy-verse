@@ -11,8 +11,6 @@ export interface User {
   avatarUrl?: string;
   coins?: number;
   schoolId?: string;
-  schoolName?: string;
-  email?: string;
 }
 
 export interface AuthContextType {

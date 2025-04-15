@@ -474,10 +474,6 @@ export type Database = {
         Args: { user_id: string } | Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
       }
-      get_user_school_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
     }
     Enums: {
       user_role: "student" | "teacher" | "admin" | "super_admin"
