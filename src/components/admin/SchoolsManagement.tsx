@@ -65,7 +65,7 @@ const SchoolsManagement = () => {
     setIsLoading(true);
     try {
       const schoolsData = await fetchSchools();
-      setSchools(schoolsData as School[]);
+      setSchools(schoolsData);
     } catch (error) {
       console.error("Error cargando escuelas:", error);
       toast({
@@ -101,7 +101,7 @@ const SchoolsManagement = () => {
       });
       
       // Añadir la nueva escuela a la lista
-      setSchools(prev => [...prev, newSchoolData as School]);
+      setSchools(prev => [...prev, newSchoolData]);
       
       // Limpiar el formulario
       setNewSchool({
@@ -141,7 +141,7 @@ const SchoolsManagement = () => {
       
       // Actualizar la lista de escuelas
       setSchools(prev => prev.map(school => 
-        school.id === selectedSchool.id ? updatedSchool as School : school
+        school.id === selectedSchool.id ? updatedSchool : school
       ));
       
       // Limpiar selección

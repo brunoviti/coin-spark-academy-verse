@@ -1,4 +1,3 @@
-
 import React, { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -82,13 +81,15 @@ const MainLayout = ({ children, title }: MainLayoutProps) => {
       to: "/admin",
       label: "Administración",
       icon: <Settings className="h-5 w-5" />,
-      roles: ["admin", "super_admin"] as const
+      roles: ["admin", "super_admin"] as const // Updated to exactly match the allowed roles
     }
   ];
 
   // Filter links based on user role
   const allowedLinks = user
-    ? navigationLinks.filter(link => link.roles.includes(user.role))
+    ? navigationLinks.filter(link => 
+        link.roles.includes(user.role as "student" | "teacher" | "admin" | "super_admin")
+      )
     : [];
 
   return (
