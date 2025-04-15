@@ -90,12 +90,25 @@ export const enrollStudentInClass = async (
   return data;
 };
 
-// obtenga todas las clases para una escuela En classes.ts
+// Obtener todas las clases para una escuela
 export const fetchSchoolClasses = async (schoolId: string): Promise<ClassType[]> => {
   const { data, error } = await supabase
     .from('classes')
     .select('*')
     .eq('school_id', schoolId); // Filtra por school_id
+  if (error) throw error;
+  return data || [];
+};
+
+// Obtener todas las clases (sin filtrar por escuela) - para super_admin
+export const fetchAllClasses = async (): Promise<ClassType[]> => {
+  const { data, error } = await supabase
+    .from('classes')
+    .select(`
+      *,
+      teacher:teacher_id(name),
+      school:school_id(name)
+    `);
   if (error) throw error;
   return data || [];
 };
