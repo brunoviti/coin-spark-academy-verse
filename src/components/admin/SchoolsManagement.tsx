@@ -15,19 +15,10 @@ import {
 } from "lucide-react";
 import { fetchSchools, createSchool, updateSchool, deleteSchool } from "@/integrations/supabase/helpers/schools";
 import { fetchAllClasses } from "@/integrations/supabase/helpers/classes";
+import { Database } from "@/integrations/supabase/types";
 
 // Definición del tipo School para evitar errores
-interface School {
-  id: string;
-  name: string;
-  coin_name: string;
-  coin_symbol: string;
-  max_supply: number;
-  current_supply: number;
-  created_at: string;
-  updated_at: string;
-  admin_id: string | null;
-}
+type School = Database['public']['Tables']['schools']['Row'];
 
 const SchoolsManagement = () => {
   const { user } = useAuth();

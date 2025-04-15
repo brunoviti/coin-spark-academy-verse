@@ -1,3 +1,4 @@
+
 import React, { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -12,6 +13,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Database } from "@/integrations/supabase/types";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -81,14 +83,15 @@ const MainLayout = ({ children, title }: MainLayoutProps) => {
       to: "/admin",
       label: "Administración",
       icon: <Settings className="h-5 w-5" />,
-      roles: ["admin", "super_admin"] as const // Updated to exactly match the allowed roles
+      roles: ["admin", "super_admin"] as const
     }
   ];
 
-  // Filter links based on user role
+  // Correctly filter links based on user role
   const allowedLinks = user
     ? navigationLinks.filter(link => 
-        link.roles.includes(user.role as "student" | "teacher" | "admin" | "super_admin")
+        // Correctly use the TypeScript type for roles
+        link.roles.includes(user.role as Database['public']['Enums']['user_role'])
       )
     : [];
 
