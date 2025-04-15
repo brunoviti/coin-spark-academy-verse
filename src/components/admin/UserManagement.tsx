@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +39,10 @@ const UserManagement = () => {
     password: ""
   });
   
+  // Estado para crear usuario
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
+  
   // Estado para asignar clase
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [selectedClass, setSelectedClass] = useState("");
@@ -63,15 +66,15 @@ const UserManagement = () => {
       try {
         // Cargar estudiantes
         const studentsData = await fetchAllStudents(user.schoolId as string);
-        setStudents(studentsData);
+        setStudents(studentsData || []);
         
         // Cargar profesores
         const teachersData = await fetchAllTeachers(user.schoolId as string);
-        setTeachers(teachersData);
+        setTeachers(teachersData || []);
         
         // Cargar clases
         const classesData = await fetchSchoolClasses(user.schoolId as string);
-        setClasses(classesData);
+        setClasses(classesData || []);
       } catch (error) {
         console.error("Error cargando datos:", error);
         toast({
@@ -102,6 +105,8 @@ const UserManagement = () => {
   const handleCreateUser = async () => {
     if (!user?.schoolId) return;
     
+    setIsCreatingUser(true);
+    
     try {
       // Generar una contraseña aleatoria si no se proporciona
       const password = newUser.password || Math.random().toString(36).slice(-8);
@@ -117,7 +122,7 @@ const UserManagement = () => {
       
       toast({
         title: "Usuario creado",
-        description: `Se ha creado el usuario ${newUser.name} correctamente${!newUser.password ? `. Contraseña generada: ${password}` : ''}`,
+        description: `Se ha creado el usuario ${newUser.name} correctamente${!newUser.password ? `. Contraseña generada: ${password}` : ''}. Se ha enviado un correo de confirmación.`,
       });
       
       // Actualizar las listas según el rol
@@ -149,13 +154,29 @@ const UserManagement = () => {
         coins: 0,
         password: ""
       });
+      
+      // Cerrar el diálogo
+      setCreateUserDialogOpen(false);
     } catch (error) {
       console.error("Error creando usuario:", error);
+      
+      // Mensaje de error más amigable
+      let errorMessage = "No se pudo crear el usuario";
+      const errorObj = error as any;
+      
+      if (errorObj?.message?.includes("email address is already registered")) {
+        errorMessage = "Este correo electrónico ya está registrado";
+      } else if (errorObj?.message) {
+        errorMessage += `: ${errorObj.message}`;
+      }
+      
       toast({
         title: "Error",
-        description: `No se pudo crear el usuario: ${(error as Error).message}`,
+        description: errorMessage,
         variant: "destructive"
       });
+    } finally {
+      setIsCreatingUser(false);
     }
   };
   
@@ -344,7 +365,7 @@ const UserManagement = () => {
             />
           </div>
           
-          <Dialog>
+          <Dialog open={createUserDialogOpen} onOpenChange={setCreateUserDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -427,7 +448,19 @@ const UserManagement = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleCreateUser}>Crear Usuario</Button>
+                <Button 
+                  onClick={handleCreateUser} 
+                  disabled={isCreatingUser || !newUser.email || !newUser.name}
+                >
+                  {isCreatingUser ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Creando...
+                    </>
+                  ) : (
+                    'Crear Usuario'
+                  )}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

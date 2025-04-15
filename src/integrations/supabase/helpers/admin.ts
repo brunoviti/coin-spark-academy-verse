@@ -56,15 +56,17 @@ export const createNewUser = async (userData: {
   school_id: string;
   coins?: number;
 }) => {
-  // Primero creamos el usuario en Auth
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+  // Usar el método de registro estándar en lugar de admin.createUser
+  const { data: authData, error: authError } = await supabase.auth.signUp({
     email: userData.email,
     password: userData.password,
-    email_confirm: true,
-    user_metadata: {
-      name: userData.name,
-      role: userData.role,
-      school_id: userData.school_id
+    options: {
+      data: {
+        name: userData.name,
+        role: userData.role,
+        school_id: userData.school_id
+      },
+      emailRedirectTo: window.location.origin
     }
   });
   
@@ -72,7 +74,10 @@ export const createNewUser = async (userData: {
   
   // El perfil se crea automáticamente mediante el trigger handle_new_user_auth
   // Pero podemos actualizar datos adicionales si es necesario
-  if (userData.coins && userData.coins > 0) {
+  if (userData.coins && userData.coins > 0 && authData.user) {
+    // Esperar un momento para que el trigger complete su ejecución
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ coins: userData.coins })
