@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +11,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { 
-  Building, Plus, Edit, Trash2, RefreshCw, School, Users, CreditCard
+  Building, Plus, Edit, Trash2, RefreshCw, School, Users, CreditCard, FileText, Download
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSchools, createSchool, updateSchool, deleteSchool } from "@/integrations/supabase/helpers/schools";
 import { fetchAllClasses } from "@/integrations/supabase/helpers/classes";
 
 // Definición del tipo School para evitar errores
@@ -40,6 +39,8 @@ const SchoolsManagement = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isViewingClasses, setIsViewingClasses] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   
   // Estado para el formulario de nueva escuela
   const [newSchool, setNewSchool] = useState({
@@ -50,19 +51,21 @@ const SchoolsManagement = () => {
   });
   
   useEffect(() => {
+    // Comprobar si el usuario es super_admin
+    if (user && user.role === 'super_admin') {
+      setIsSuperAdmin(true);
+    } else {
+      setIsSuperAdmin(false);
+    }
+    
     loadSchools();
-  }, []);
+  }, [user]);
   
   const loadSchools = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('schools')
-        .select('*')
-        .order('name');
-        
-      if (error) throw error;
-      setSchools(data as School[]);
+      const schoolsData = await fetchSchools();
+      setSchools(schoolsData as School[]);
     } catch (error) {
       console.error("Error cargando escuelas:", error);
       toast({
@@ -80,18 +83,17 @@ const SchoolsManagement = () => {
     
     setIsCreating(true);
     try {
-      const { data, error } = await supabase
-        .from('schools')
-        .insert({
-          name: newSchool.name,
-          coin_name: newSchool.coin_name,
-          coin_symbol: newSchool.coin_symbol,
-          max_supply: newSchool.max_supply,
-          current_supply: 0
-        })
-        .select();
-        
-      if (error) throw error;
+      // Verificar que el usuario es super_admin
+      if (!isSuperAdmin) {
+        throw new Error("Solo los super administradores pueden crear escuelas");
+      }
+      
+      const newSchoolData = await createSchool({
+        name: newSchool.name,
+        coin_name: newSchool.coin_name,
+        coin_symbol: newSchool.coin_symbol,
+        max_supply: newSchool.max_supply
+      });
       
       toast({
         title: "Escuela creada",
@@ -99,9 +101,7 @@ const SchoolsManagement = () => {
       });
       
       // Añadir la nueva escuela a la lista
-      if (data && data.length > 0) {
-        setSchools(prev => [...prev, data[0] as School]);
-      }
+      setSchools(prev => [...prev, newSchoolData as School]);
       
       // Limpiar el formulario
       setNewSchool({
@@ -127,17 +127,12 @@ const SchoolsManagement = () => {
     
     setIsEditing(true);
     try {
-      const { error } = await supabase
-        .from('schools')
-        .update({
-          name: selectedSchool.name,
-          coin_name: selectedSchool.coin_name,
-          coin_symbol: selectedSchool.coin_symbol,
-          max_supply: selectedSchool.max_supply
-        })
-        .eq('id', selectedSchool.id);
-        
-      if (error) throw error;
+      const updatedSchool = await updateSchool(selectedSchool.id, {
+        name: selectedSchool.name,
+        coin_name: selectedSchool.coin_name,
+        coin_symbol: selectedSchool.coin_symbol,
+        max_supply: selectedSchool.max_supply
+      });
       
       toast({
         title: "Escuela actualizada",
@@ -146,7 +141,7 @@ const SchoolsManagement = () => {
       
       // Actualizar la lista de escuelas
       setSchools(prev => prev.map(school => 
-        school.id === selectedSchool.id ? selectedSchool : school
+        school.id === selectedSchool.id ? updatedSchool as School : school
       ));
       
       // Limpiar selección
@@ -164,17 +159,21 @@ const SchoolsManagement = () => {
   };
   
   const handleDeleteSchool = async (schoolId: string) => {
+    if (!isSuperAdmin) {
+      toast({
+        title: "Permiso denegado",
+        description: "Solo los super administradores pueden eliminar escuelas",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!confirm("¿Estás seguro de que deseas eliminar esta escuela? Esta acción no se puede deshacer.")) {
       return;
     }
     
     try {
-      const { error } = await supabase
-        .from('schools')
-        .delete()
-        .eq('id', schoolId);
-        
-      if (error) throw error;
+      await deleteSchool(schoolId);
       
       toast({
         title: "Escuela eliminada",
@@ -211,6 +210,53 @@ const SchoolsManagement = () => {
     }
   };
   
+  const exportSchoolsToCSV = async () => {
+    setIsExporting(true);
+    try {
+      // Preparar los datos para el CSV
+      const headers = ["Nombre", "Moneda", "Símbolo", "Suministro Máximo", "Suministro Actual", "Creada"];
+      const rows = schools.map(school => [
+        school.name,
+        school.coin_name,
+        school.coin_symbol,
+        school.max_supply.toString(),
+        school.current_supply.toString(),
+        new Date(school.created_at).toLocaleDateString()
+      ]);
+      
+      // Crear el contenido del CSV
+      let csvContent = headers.join(",") + "\n";
+      rows.forEach(row => {
+        csvContent += row.join(",") + "\n";
+      });
+      
+      // Crear un blob y descargar
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `escuelas-${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Reporte generado",
+        description: "El reporte de escuelas se ha descargado correctamente",
+      });
+    } catch (error) {
+      console.error("Error exportando datos:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo generar el reporte",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -219,84 +265,106 @@ const SchoolsManagement = () => {
           Gestión de Escuelas
         </CardTitle>
         
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Escuela
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Crear Nueva Escuela</DialogTitle>
-              <DialogDescription>
-                Configura los detalles para la nueva escuela
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="school-name" className="text-right">
-                  Nombre
-                </Label>
-                <Input
-                  id="school-name"
-                  value={newSchool.name}
-                  onChange={(e) => setNewSchool({ ...newSchool, name: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="coin-name" className="text-right">
-                  Nombre Moneda
-                </Label>
-                <Input
-                  id="coin-name"
-                  value={newSchool.coin_name}
-                  onChange={(e) => setNewSchool({ ...newSchool, coin_name: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="coin-symbol" className="text-right">
-                  Símbolo
-                </Label>
-                <Input
-                  id="coin-symbol"
-                  value={newSchool.coin_symbol}
-                  onChange={(e) => setNewSchool({ ...newSchool, coin_symbol: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="max-supply" className="text-right">
-                  Suministro Máx.
-                </Label>
-                <Input
-                  id="max-supply"
-                  type="number"
-                  value={newSchool.max_supply}
-                  onChange={(e) => setNewSchool({ ...newSchool, max_supply: parseInt(e.target.value) || 10000 })}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                onClick={handleCreateSchool} 
-                disabled={isCreating || !newSchool.name}
-              >
-                {isCreating ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Creando...
-                  </>
-                ) : (
-                  'Crear Escuela'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <div className="flex space-x-2">
+          {isSuperAdmin && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva Escuela
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Crear Nueva Escuela</DialogTitle>
+                  <DialogDescription>
+                    Configura los detalles para la nueva escuela
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="school-name" className="text-right">
+                      Nombre
+                    </Label>
+                    <Input
+                      id="school-name"
+                      value={newSchool.name}
+                      onChange={(e) => setNewSchool({ ...newSchool, name: e.target.value })}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="coin-name" className="text-right">
+                      Nombre Moneda
+                    </Label>
+                    <Input
+                      id="coin-name"
+                      value={newSchool.coin_name}
+                      onChange={(e) => setNewSchool({ ...newSchool, coin_name: e.target.value })}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="coin-symbol" className="text-right">
+                      Símbolo
+                    </Label>
+                    <Input
+                      id="coin-symbol"
+                      value={newSchool.coin_symbol}
+                      onChange={(e) => setNewSchool({ ...newSchool, coin_symbol: e.target.value })}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="max-supply" className="text-right">
+                      Suministro Máx.
+                    </Label>
+                    <Input
+                      id="max-supply"
+                      type="number"
+                      value={newSchool.max_supply}
+                      onChange={(e) => setNewSchool({ ...newSchool, max_supply: parseInt(e.target.value) || 10000 })}
+                      className="col-span-3"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    onClick={handleCreateSchool} 
+                    disabled={isCreating || !newSchool.name}
+                  >
+                    {isCreating ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Creando...
+                      </>
+                    ) : (
+                      'Crear Escuela'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+          
+          <Button 
+            variant="outline" 
+            onClick={exportSchoolsToCSV}
+            disabled={isExporting || schools.length === 0}
+          >
+            {isExporting ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Exportando...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </>
+            )}
+          </Button>
+        </div>
       </CardHeader>
       
       <CardContent>
@@ -503,13 +571,15 @@ const SchoolsManagement = () => {
                             <School className="h-4 w-4" />
                           </Button>
                           
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleDeleteSchool(school.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
+                          {isSuperAdmin && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleDeleteSchool(school.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
