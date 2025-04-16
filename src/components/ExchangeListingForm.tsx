@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { createExchangeListing } from "@/integrations/supabase/helpers/exchange";
+import { supabase } from "@/integrations/supabase/client";
 import { Share2 } from "lucide-react";
 
 interface ExchangeListingFormProps {
@@ -66,13 +66,20 @@ const ExchangeListingForm: React.FC<ExchangeListingFormProps> = ({ onSuccess, on
     setIsSubmitting(true);
     
     try {
-      await createExchangeListing(
-        user.id,
-        user.schoolId,
-        title,
-        description,
-        priceNum
-      );
+      // Insertar directamente en la tabla de exchange_listings
+      const { data, error } = await supabase
+        .from('exchange_listings')
+        .insert({
+          seller_id: user.id,
+          school_id: user.schoolId,
+          title: title,
+          description: description,
+          asking_price: priceNum,
+          status: 'active'
+        })
+        .select();
+      
+      if (error) throw error;
       
       toast({
         title: "Anuncio creado",

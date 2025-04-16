@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import MainLayout from "@/components/layouts/MainLayout";
@@ -17,11 +17,33 @@ import {
   mockTransactions,
   mockSchoolStats 
 } from "@/data/mockData";
+import { fetchSchoolById } from "@/integrations/supabase/helpers/schools";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [schoolName, setSchoolName] = useState("");
+  const [isLoadingSchool, setIsLoadingSchool] = useState(false);
+
+  useEffect(() => {
+    const loadSchoolInfo = async () => {
+      if (user?.schoolId) {
+        setIsLoadingSchool(true);
+        try {
+          const schoolData = await fetchSchoolById(user.schoolId);
+          setSchoolName(schoolData.name);
+        } catch (error) {
+          console.error("Error loading school info:", error);
+          setSchoolName("Mi Escuela");
+        } finally {
+          setIsLoadingSchool(false);
+        }
+      }
+    };
+
+    loadSchoolInfo();
+  }, [user]);
 
   if (!user) {
     navigate("/");
@@ -599,6 +621,11 @@ const Dashboard = () => {
 
   return (
     <MainLayout title="Panel de Control">
+      <div className="mb-6">
+        <h2 className="font-tech text-3xl text-center text-invertidos-blue/80 tracking-widest">
+          {isLoadingSchool ? "Cargando..." : schoolName}
+        </h2>
+      </div>
       {user.role === "student" && renderStudentDashboard()}
       {user.role === "teacher" && renderTeacherDashboard()}
       {user.role === "admin" && renderAdminDashboard()}

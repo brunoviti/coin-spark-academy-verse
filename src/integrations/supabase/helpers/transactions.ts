@@ -1,4 +1,3 @@
-
 import { supabase } from "../client";
 import { Database } from "../types";
 import { updateProfile } from "./profiles";
@@ -171,30 +170,50 @@ export const createPurchaseTransaction = async (
  * @returns Lista de transacciones
  */
 export const fetchUserTransactions = async (userId: string): Promise<any[]> => {
-  // Obtenemos transacciones donde el usuario es remitente o destinatario
+  // Obtener transacciones donde el usuario es remitente o destinatario
   const { data, error } = await supabase
     .from('transactions')
-    .select(`
-      *,
-      sender:sender_id (name),
-      receiver:receiver_id (name)
-    `)
+    .select('*')
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order('created_at', { ascending: false });
     
   if (error) throw error;
+
+  // Obtener información de remitentes y destinatarios para enriquecer datos
+  const uniqueUserIds = new Set<string>();
+  data.forEach(tx => {
+    if (tx.sender_id) uniqueUserIds.add(tx.sender_id);
+    if (tx.receiver_id) uniqueUserIds.add(tx.receiver_id);
+  });
+
+  const userIds = Array.from(uniqueUserIds);
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, name')
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error("Error fetching profiles:", profilesError);
+  }
+
+  const userMap = new Map();
+  profiles?.forEach(profile => {
+    userMap.set(profile.id, profile);
+  });
   
   // Procesar las transacciones para facilitar su uso en la UI
   return data.map((transaction: any) => {
     // Determinar si es una transacción entrante o saliente
     const isIncoming = transaction.receiver_id === userId;
+    const senderProfile = transaction.sender_id ? userMap.get(transaction.sender_id) : null;
+    const receiverProfile = transaction.receiver_id ? userMap.get(transaction.receiver_id) : null;
     
     return {
       ...transaction,
       type: isIncoming ? 'earning' : 'spending',
       otherPartyName: isIncoming 
-        ? transaction.sender?.name || 'Sistema' 
-        : transaction.receiver?.name || 'Tienda',
+        ? (senderProfile?.name || 'Sistema') 
+        : (receiverProfile?.name || 'Tienda'),
       isIncoming
     };
   });
