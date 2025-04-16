@@ -37,11 +37,33 @@ export const fetchUserById = async (userId: string): Promise<ProfileType> => {
 };
 
 /**
+ * Fetch teachers without a school assignment
+ * @returns Array of teacher profiles
+ */
+export const fetchAvailableTeachers = async (): Promise<ProfileType[]> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .is('school_id', null)
+    .eq('role', 'teacher');
+    
+  if (error) throw error;
+  return data;
+};
+
+/**
  * Create a new user profile
- * @param userData User data
+ * @param userData User data (must include required fields)
  * @returns The created user profile
  */
-export const createUser = async (userData: Partial<ProfileType>): Promise<ProfileType> => {
+export const createUser = async (userData: { 
+  name: string;
+  id: string;
+  role: "student" | "teacher" | "admin" | "super_admin";
+  school_id?: string;
+  coins?: number;
+  avatar_url?: string;
+}): Promise<ProfileType> => {
   const { data, error } = await supabase
     .from('profiles')
     .insert(userData)

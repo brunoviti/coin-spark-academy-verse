@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { School, PlusCircle, Trash2, Edit, Users, BookOpen } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { School, PlusCircle, Trash2, Edit, Users, BookOpen, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchSchools, createSchool, updateSchool, deleteSchool } from "@/integrations/supabase/helpers/schools";
-import { fetchSchoolUsers } from "@/integrations/supabase/helpers/users";
+import { fetchSchoolUsers, fetchAvailableTeachers, updateUser, createUser } from "@/integrations/supabase/helpers/users";
 import { fetchSchoolClasses } from "@/integrations/supabase/helpers/classes";
+import { supabase } from "@/integrations/supabase/client";
 
 const SchoolsManagement = () => {
   const { toast } = useToast();
@@ -42,6 +44,17 @@ const SchoolsManagement = () => {
   
   // Edit state
   const [editSchool, setEditSchool] = useState<any>(null);
+  
+  // Add user dialog state
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [userCreationMode, setUserCreationMode] = useState<'select' | 'create'>('select');
+  const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [newUserData, setNewUserData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
   
   useEffect(() => {
     loadSchools();
@@ -231,6 +244,131 @@ const SchoolsManagement = () => {
     setShowEditDialog(true);
   };
   
+  const handleOpenAddUserDialog = async () => {
+    if (!activeSchool) return;
+    
+    try {
+      // Fetch teachers who don't have a school assigned
+      const teachers = await fetchAvailableTeachers();
+      setAvailableTeachers(teachers);
+      setShowAddUserDialog(true);
+      // Default to select mode if there are available teachers
+      setUserCreationMode(teachers.length > 0 ? 'select' : 'create');
+    } catch (error) {
+      console.error("Error loading available teachers:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los profesores disponibles",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleAssignTeacherAsAdmin = async () => {
+    if (!activeSchool || !selectedTeacherId) {
+      toast({
+        title: "Error",
+        description: "Debes seleccionar un profesor",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Update teacher's role to admin and assign to school
+      const updatedUser = await updateUser(selectedTeacherId, {
+        role: "admin",
+        school_id: activeSchool.id
+      });
+      
+      toast({
+        title: "Administrador asignado",
+        description: `${updatedUser.name} ha sido asignado como administrador de la escuela`,
+      });
+      
+      // Update school admin_id
+      await updateSchool(activeSchool.id, {
+        admin_id: selectedTeacherId
+      });
+      
+      // Reload school details
+      loadSchoolDetails(activeSchool.id);
+      
+      // Close dialog
+      setShowAddUserDialog(false);
+      setSelectedTeacherId("");
+    } catch (error) {
+      console.error("Error assigning admin:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo asignar el administrador",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleCreateAdminUser = async () => {
+    if (!activeSchool || !newUserData.name || !newUserData.email || !newUserData.password) {
+      toast({
+        title: "Error",
+        description: "Todos los campos son requeridos",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Create new user in auth
+      const { data: authUser, error: authError } = await supabase.auth.signUp({
+        email: newUserData.email,
+        password: newUserData.password,
+        options: {
+          data: {
+            name: newUserData.name,
+            role: "admin",
+            school_id: activeSchool.id
+          }
+        }
+      });
+      
+      if (authError) throw authError;
+      
+      if (authUser.user) {
+        // The trigger should create the profile, but we'll also update the school
+        await updateSchool(activeSchool.id, {
+          admin_id: authUser.user.id
+        });
+        
+        toast({
+          title: "Administrador creado",
+          description: `${newUserData.name} ha sido creado como administrador de la escuela`,
+        });
+        
+        // Reload school details
+        loadSchoolDetails(activeSchool.id);
+        
+        // Close dialog
+        setShowAddUserDialog(false);
+        setNewUserData({ name: "", email: "", password: "" });
+      }
+    } catch (error) {
+      console.error("Error creating admin:", error);
+      toast({
+        title: "Error",
+        description: `No se pudo crear el administrador: ${(error as Error).message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
   if (isLoading) {
     return (
       <Card>
@@ -362,8 +500,8 @@ const SchoolsManagement = () => {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-medium">Usuarios de la Escuela</h3>
-                        <Button size="sm">
-                          <PlusCircle className="h-4 w-4 mr-1" />
+                        <Button size="sm" onClick={handleOpenAddUserDialog}>
+                          <UserPlus className="h-4 w-4 mr-1" />
                           Agregar Usuario
                         </Button>
                       </div>
@@ -406,13 +544,17 @@ const SchoolsManagement = () => {
                                         ? 'bg-green-100 text-green-800' 
                                         : user.role === 'student'
                                         ? 'bg-blue-100 text-blue-800'
-                                        : 'bg-purple-100 text-purple-800'
+                                        : user.role === 'admin'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : 'bg-red-100 text-red-800'
                                     }`}>
                                       {user.role === 'teacher' 
                                         ? 'Profesor' 
                                         : user.role === 'student'
                                         ? 'Estudiante'
-                                        : 'Administrador'}
+                                        : user.role === 'admin'
+                                        ? 'Administrador'
+                                        : 'Super Admin'}
                                     </span>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -531,7 +673,6 @@ const SchoolsManagement = () => {
         )}
       </div>
       
-      {/* Create School Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
@@ -642,7 +783,6 @@ const SchoolsManagement = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Edit School Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
@@ -755,7 +895,6 @@ const SchoolsManagement = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Delete School Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -790,6 +929,126 @@ const SchoolsManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Agregar Usuario Administrador</DialogTitle>
+            <DialogDescription>
+              Asigna un profesor existente como administrador o crea un nuevo usuario
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="flex gap-2 mb-4">
+              <Button 
+                variant={userCreationMode === 'select' ? "default" : "outline"}
+                onClick={() => setUserCreationMode('select')}
+                disabled={availableTeachers.length === 0}
+              >
+                Seleccionar profesor
+              </Button>
+              <Button 
+                variant={userCreationMode === 'create' ? "default" : "outline"}
+                onClick={() => setUserCreationMode('create')}
+              >
+                Crear nuevo usuario
+              </Button>
+            </div>
+            
+            {userCreationMode === 'select' ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Selecciona un profesor</Label>
+                  {availableTeachers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No hay profesores disponibles sin escuela asignada.</p>
+                  ) : (
+                    <Select 
+                      value={selectedTeacherId} 
+                      onValueChange={setSelectedTeacherId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un profesor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTeachers.map((teacher) => (
+                          <SelectItem key={teacher.id} value={teacher.id}>
+                            {teacher.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                
+                <Button 
+                  className="w-full" 
+                  onClick={handleAssignTeacherAsAdmin}
+                  disabled={isSubmitting || !selectedTeacherId}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                      Asignando...
+                    </>
+                  ) : (
+                    'Asignar como Administrador'
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nombre</Label>
+                  <Input
+                    id="name"
+                    value={newUserData.name}
+                    onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                    placeholder="Nombre completo"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Correo electrónico</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUserData.email}
+                    onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                    placeholder="correo@ejemplo.com"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUserData.password}
+                    onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                    placeholder="Contraseña segura"
+                  />
+                </div>
+                
+                <Button 
+                  className="w-full" 
+                  onClick={handleCreateAdminUser}
+                  disabled={isSubmitting || !newUserData.name || !newUserData.email || !newUserData.password}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                      Creando...
+                    </>
+                  ) : (
+                    'Crear Administrador'
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
