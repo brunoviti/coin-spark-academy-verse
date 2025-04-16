@@ -70,3 +70,18 @@ export const updateSchool = async (schoolId: string, updates: Partial<SchoolType
   if (error) throw error;
   return data;
 };
+
+/**
+ * Elimina una escuela por su ID
+ * @param schoolId ID de la escuela
+ * @returns true si se eliminó correctamente
+ */
+export const deleteSchool = async (schoolId: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('schools')
+    .delete()
+    .eq('id', schoolId);
+    
+  if (error) throw error;
+  return true;
+};
