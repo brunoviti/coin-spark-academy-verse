@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllClasses } from "@/integrations/supabase/helpers/classes";
 
-// Definición del tipo School para evitar errores
 interface School {
   id: string;
   name: string;
@@ -41,7 +39,6 @@ const SchoolsManagement = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isViewingClasses, setIsViewingClasses] = useState(false);
   
-  // Estado para el formulario de nueva escuela
   const [newSchool, setNewSchool] = useState({
     name: "",
     coin_name: "EduCoin",
@@ -98,12 +95,10 @@ const SchoolsManagement = () => {
         description: `Se ha creado la escuela ${newSchool.name} correctamente`,
       });
       
-      // Añadir la nueva escuela a la lista
       if (data && data.length > 0) {
         setSchools(prev => [...prev, data[0] as School]);
       }
       
-      // Limpiar el formulario
       setNewSchool({
         name: "",
         coin_name: "EduCoin",
@@ -144,12 +139,10 @@ const SchoolsManagement = () => {
         description: `Se ha actualizado la escuela ${selectedSchool.name} correctamente`,
       });
       
-      // Actualizar la lista de escuelas
       setSchools(prev => prev.map(school => 
         school.id === selectedSchool.id ? selectedSchool : school
       ));
       
-      // Limpiar selección
       setSelectedSchool(null);
     } catch (error) {
       console.error("Error actualizando escuela:", error);
@@ -181,7 +174,6 @@ const SchoolsManagement = () => {
         description: "Se ha eliminado la escuela correctamente",
       });
       
-      // Actualizar la lista de escuelas
       setSchools(prev => prev.filter(school => school.id !== schoolId));
     } catch (error) {
       console.error("Error eliminando escuela:", error);
